@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PyAssist</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & Variables ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:   #000000;
+  --off:     #080808;
+  --panel:   #0d0d0d;
+  --line:    #1a1a1a;
+  --line2:   #242424;
+  --muted:   #444444;
+  --ghost:   #2a2a2a;
+  --text:    #d8d4cc;
+  --text-dim:#6b6760;
+  --red:     #c0392b;
+  --red-dim: rgba(192,57,43,0.08);
+  --red-mid: rgba(192,57,43,0.18);
+  --white:   #f0ece4;
+
+  --serif:   'Cormorant Garamond', Georgia, serif;
+  --cond:    'Barlow Condensed', sans-serif;
+  --mono:    'JetBrains Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--black);
+  color: var(--text);
+  font-family: var(--cond);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--off);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-head {
+  padding: 18px 20px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.wordmark {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  color: var(--white);
+  display: block;
+  line-height: 1;
+}
+
+.wordmark em {
+  font-style: italic;
+  color: var(--red);
+}
+
+.tagline {
+  margin-top: 6px;
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Nav */
+.nav {
+  padding: 16px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-section {
+  padding: 0 20px;
+  margin-bottom: 4px;
+}
+
+.nav-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 0 6px;
+  display: block;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: color 0.12s, background 0.12s;
+  text-align: left;
+  position: relative;
+}
+
+.nav-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 2px; height: 60%;
+  background: var(--red);
+  border-radius: 0 1px 1px 0;
+  transition: transform 0.12s;
+}
+
+.nav-btn:hover { color: var(--text); background: var(--ghost); }
+.nav-btn.active { color: var(--white); background: var(--red-dim); }
+.nav-btn.active::before { transform: translateY(-50%) scaleY(1); }
+.nav-btn.active .nav-icon { color: var(--red); }
+
+.nav-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.7; }
+.nav-btn.active .nav-icon { opacity: 1; }
+
+/* Divider */
+.sidebar-divider { height: 1px; background: var(--line); margin: 4px 0; }
+
+/* Load Project */
+.load-box {
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.load-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.load-input {
+  width: 100%;
+  background: var(--black);
+  border: 1px solid var(--line2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.12s;
+  border-radius: 1px;
+  letter-spacing: 0.02em;
+}
+.load-input::placeholder { color: var(--muted); }
+.load-input:focus { border-color: var(--red); }
+
+.load-btn {
+  width: 100%;
+  margin-top: 7px;
+  padding: 8px;
+  background: var(--red);
+  border: none;
+  color: var(--white);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: background 0.12s, opacity 0.12s;
+}
+.load-btn:hover { background: #a93226; }
+.load-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Status */
+.status-box {
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.status-item:last-child { margin-bottom: 0; }
+
+.pip {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--line2);
+  flex-shrink: 0;
+}
+.pip.on  { background: #27ae60; box-shadow: 0 0 4px #27ae60; }
+.pip.err { background: var(--red); }
+.pip.dim { background: var(--muted); }
+
+.status-val {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+  font-family: var(--mono);
+  font-size: 9px;
+}
+
+/* ── Main area ───────────────────────────────────────────────────── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--black);
+}
+
+/* Topbar */
+.topbar {
+  border-bottom: 1px solid var(--line);
+  padding: 0 28px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+
+.mode-crumb {
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mode-crumb b { color: var(--white); font-weight: 600; }
+
+.conn-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--line2);
+  border-radius: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.conn-pill.ok  { border-color: rgba(39,174,96,0.25); color: #27ae60; }
+.conn-pill.err { border-color: rgba(192,57,43,0.3);  color: var(--red); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--line2);
+  color: var(--muted);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: all 0.12s;
+}
+.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+
+/* Chat area */
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.chat::-webkit-scrollbar { width: 2px; }
+.chat::-webkit-scrollbar-thumb { background: var(--line2); }
+
+/* Empty state */
+.empty {
+  margin: auto;
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.empty-heading {
+  font-family: var(--serif);
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--white);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.empty-heading em {
+  font-style: italic;
+  color: var(--red);
+}
+
+.empty-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 32px;
+  font-weight: 400;
+}
+
+.empty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.empty-card {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  border-radius: 1px;
+}
+.empty-card:hover { border-color: var(--red); background: var(--red-dim); }
+
+.card-tag {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 4px;
+}
+.card-text {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.empty-card:hover .card-text { color: var(--text); }
+
+/* Messages */
+.msg {
+  border-bottom: 1px solid var(--line);
+  padding: 20px 28px;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 0 20px;
+  animation: msgIn 0.16s ease;
+}
+.msg:last-child { border-bottom: none; }
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-left {
+  padding-top: 2px;
+}
+
+.msg-role {
+  font-family: var(--cond);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.msg-role.you      { color: var(--red); }
+.msg-role.assist   { color: var(--muted); }
+.msg-role.sys-ok   { color: #27ae60; }
+.msg-role.sys-err  { color: var(--red); }
+.msg-role.sys-warn { color: #e67e22; }
+
+.msg-time {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.msg-body {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.file-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--line2);
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  border-radius: 1px;
+}
+
+/* Code */
+.msg-body code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  padding: 1px 5px;
+  border-radius: 1px;
+  color: #e06c75;
+  letter-spacing: 0;
+}
+pre.cb {
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-left: 2px solid var(--red);
+  padding: 14px 16px;
+  margin: 10px 0;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  color: #abb2bf;
+  border-radius: 0 1px 1px 0;
+  white-space: pre;
+}
+pre.cb::-webkit-scrollbar { height: 2px; }
+pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
+
+.stdout-b {
+  background: rgba(39,174,96,0.04);
+  border: 1px solid rgba(39,174,96,0.15);
+  border-left: 2px solid #27ae60;
+  padding: 10px 14px; margin: 6px 0;
+  font-family: var(--mono); font-size: 11px;
+  color: #888; white-space: pre-wrap;
+  border-radius: 0 1px 1px 0;
+}
+.stderr-b {
+  background: rgba(192,57,43,0.05);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-left: 2px solid var(--red);
+  padding: 10px 14px; margin: 6px 0;
+  font-family: var(--mono); font-size: 11px;
+  color: #c0504d; white-space: pre-wrap;
+  border-radius: 0 1px 1px 0;
+}
+
+/* Thinking */
+.thinking-row {
+  border-bottom: 1px solid var(--line);
+  padding: 18px 28px;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 0 20px;
+}
+.thinking-dots { display: flex; gap: 5px; padding-top: 4px; }
+.thinking-dots span {
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--red);
+  animation: pulse 1.3s infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: 0.18s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes pulse { 0%,100%{opacity:.15;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+
+.thinking-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 2px;
+}
+
+/* ── Input area ──────────────────────────────────────────────────── */
+.input-area {
+  border-top: 1px solid var(--line);
+  padding: 16px 28px 20px;
+  flex-shrink: 0;
+  background: var(--black);
+}
+
+.input-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.mode-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--red);
+  color: var(--red);
+  border-radius: 1px;
+}
+
+.ctx-desc {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+/* Run row */
+.run-row {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.run-input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 12px;
+  outline: none;
+  border-radius: 1px;
+  transition: border-color 0.12s;
+  letter-spacing: 0.02em;
+}
+.run-input::placeholder { color: var(--muted); }
+.run-input:focus { border-color: var(--red); }
+
+.run-btn {
+  background: none;
+  border: 1px solid var(--line2);
+  color: #e67e22;
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.run-btn:hover { border-color: #e67e22; background: rgba(230,126,34,0.07); }
+
+/* Attach buttons */
+.attach-strip {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.attach-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--line2);
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: all 0.12s;
+}
+.attach-pill:hover { border-color: var(--red); color: var(--white); background: var(--red-dim); }
+.attach-pill svg { flex-shrink: 0; }
+
+/* Chips row */
+.chips-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.chip-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--line2);
+  font-size: 9px; font-family: var(--mono);
+  color: var(--muted);
+  border-radius: 1px;
+}
+.chip-item button {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 11px; line-height: 1;
+  padding: 0; transition: color 0.12s;
+}
+.chip-item button:hover { color: var(--red); }
+
+/* Composer */
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.textarea-frame {
+  flex: 1;
+  border: 1px solid var(--line2);
+  background: var(--panel);
+  border-radius: 1px;
+  transition: border-color 0.12s;
+}
+.textarea-frame:focus-within { border-color: var(--red); }
+
+textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--cond);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.55;
+  padding: 11px 14px;
+  resize: none;
+  min-height: 44px;
+  max-height: 160px;
+}
+textarea::placeholder { color: var(--muted); }
+
+.send-btn {
+  background: var(--red);
+  border: none;
+  color: var(--white);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0 20px;
+  height: 44px;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: background 0.12s, opacity 0.12s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.send-btn:hover { background: #a93226; }
+.send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.hint-line {
+  margin-top: 9px;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+.hint-line kbd {
+  font-family: var(--mono);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  padding: 1px 5px;
+  border-radius: 1px;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+#fileInput, #folderInput { display: none; }
+
+::-webkit-scrollbar { width: 2px; height: 2px; }
+::-webkit-scrollbar-thumb { background: var(--line2); }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════ -->
+  <aside class="sidebar">
+
+    <div class="sidebar-head">
+      <span class="wordmark">Py<em>Assist</em></span>
+      <span class="tagline">Python Intelligence Suite</span>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">
+        <span class="nav-label">Workspace</span>
+
+        <button class="nav-btn active" id="btn-ask" onclick="setMode('ask')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+          Ask Question
+        </button>
+
+        <button class="nav-btn" id="btn-analyze" onclick="setMode('analyze')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 21V9"/></svg>
+          Analyze Project
+        </button>
+
+        <button class="nav-btn" id="btn-debug" onclick="setMode('debug')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4M12 16h.01"/></svg>
+          Debug &amp; Run
+        </button>
+
+        <button class="nav-btn" id="btn-review" onclick="setMode('review')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
+          Code Review
+        </button>
+
+        <button class="nav-btn" id="btn-refactor" onclick="setMode('refactor')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+          Refactor
+        </button>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="nav-section">
+        <span class="nav-label">General</span>
+
+        <button class="nav-btn" id="btn-pyqa" onclick="setMode('pyqa')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Python Q&amp;A
+        </button>
+      </div>
+    </nav>
+
+    <div class="load-box">
+      <span class="load-label">Load Project Folder</span>
+      <input class="load-input" id="folderPath" placeholder="/path/to/project"
+        onkeydown="if(event.key==='Enter') loadFolder()"/>
+      <button class="load-btn" id="loadFolderBtn" onclick="loadFolder()">Load Folder</button>
+    </div>
+
+    <div class="status-box">
+      <div class="status-item">
+        <div class="pip err" id="pip-conn"></div>
+        <span>Backend</span>
+        <span class="status-val" id="val-conn">offline</span>
+      </div>
+      <div class="status-item">
+        <div class="pip dim"></div>
+        <span>Model</span>
+        <span class="status-val" id="val-model">—</span>
+      </div>
+      <div class="status-item">
+        <div class="pip" id="pip-proj"></div>
+        <span>Project</span>
+        <span class="status-val" id="val-proj">none</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ MAIN ═══════════════════════════════════════════════════════ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="mode-crumb">Mode &mdash; <b id="crumb-mode">Ask Question</b></div>
+        <div class="conn-pill err" id="connPill">
+          <div class="pip err" id="pill-pip"></div>
+          <span id="pill-txt">Disconnected</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-ghost" onclick="clearChat()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat" id="chat">
+      <div class="empty" id="emptyState">
+        <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
+        <div class="empty-sub">Load a project folder or attach files to begin.</div>
+        <div class="empty-grid">
+          <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
+            <div class="card-tag">Project</div>
+            <div class="card-text">Summarize this project</div>
+          </div>
+          <div class="empty-card" onclick="fillPrompt('Find all potential bugs and edge cases in this code.')">
+            <div class="card-tag">Debug</div>
+            <div class="card-text">Find potential bugs</div>
+          </div>
+          <div class="empty-card" onclick="fillPrompt('Review the code quality and suggest specific improvements.')">
+            <div class="card-tag">Review</div>
+            <div class="card-text">Full code review</div>
+          </div>
+          <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
+            <div class="card-tag">Python Q&amp;A</div>
+            <div class="card-text">No files needed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+
+      <div class="input-context">
+        <div class="mode-badge" id="modeBadge">Ask</div>
+        <span class="ctx-desc" id="ctxDesc">Ask a question about your loaded project</span>
+      </div>
+
+      <!-- Run row — debug only -->
+      <div class="run-row" id="runRow" style="display:none">
+        <input class="run-input" id="runFile" placeholder="main.py"
+          onkeydown="if(event.key==='Enter') runFile()"/>
+        <button class="run-btn" onclick="runFile()">&#9654; Execute</button>
+      </div>
+
+      <!-- Attach strip -->
+      <div class="attach-strip" id="attachStrip">
+        <button class="attach-pill" onclick="document.getElementById('fileInput').click()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          Attach Files
+        </button>
+        <button class="attach-pill" onclick="document.getElementById('folderInput').click()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Attach Folder
+        </button>
+      </div>
+
+      <!-- Attached chips -->
+      <div class="chips-row" id="chipsRow"></div>
+
+      <!-- Composer -->
+      <div class="composer">
+        <div class="textarea-frame">
+          <textarea id="msgInput" rows="1" placeholder="Enter your query…"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send
+        </button>
+      </div>
+
+      <div class="hint-line">
+        <kbd>Shift+Enter</kbd> for newline &nbsp;&middot;&nbsp; <kbd>Enter</kbd> to send
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<input type="file" id="fileInput" multiple
+  accept=".py,.txt,.json,.md,.yaml,.yml,.toml,.cfg,.ini,.js,.ts,.html,.css,.csv"
+  onchange="handleFiles(event)"/>
+<input type="file" id="folderInput" multiple webkitdirectory
+  onchange="handleFiles(event)"/>
+
+<script>
+/* ── Config ─────────────────────────────────────────────────────── */
+const API = 'http://localhost:5000/api';
+
+const MODES = {
+  ask:      { badge:'Ask',      title:'Ask Question',    desc:'Ask a question about your loaded project or attached files', needsProject: true  },
+  analyze:  { badge:'Analyze',  title:'Analyze Project', desc:'Comprehensive breakdown: summary, bugs, quality, improvements', needsProject: true  },
+  debug:    { badge:'Debug',    title:'Debug & Run',     desc:'Run a file and auto-debug errors, or describe an issue', needsProject: true  },
+  review:   { badge:'Review',   title:'Code Review',     desc:'Structured review of readability, structure, and correctness', needsProject: true  },
+  refactor: { badge:'Refactor', title:'Refactor',        desc:'Concrete refactoring with before/after code examples', needsProject: true  },
+  pyqa:     { badge:'Python Q&A', title:'Python Q&A',   desc:'Ask any Python question — no project or files required', needsProject: false },
+};
+
+/* ── State ──────────────────────────────────────────────────────── */
+let mode       = 'ask';
+let busy       = false;
+let backendUp  = false;
+let attached   = []; // {name, content}
+
+/* ── Backend health ─────────────────────────────────────────────── */
+async function ping() {
+  try {
+    const r = await fetch(`${API}/status`, { signal: AbortSignal.timeout(2500) });
+    const d = await r.json();
+    backendUp = true;
+    setConn(true);
+    document.getElementById('val-model').textContent = d.model || '—';
+    if (d.project_loaded) setProj(d.project_path || 'loaded');
+  } catch {
+    backendUp = false;
+    setConn(false);
+  }
+}
+
+function setConn(ok) {
+  const pill = document.getElementById('connPill');
+  const pip  = document.getElementById('pill-pip');
+  const txt  = document.getElementById('pill-txt');
+  const cp   = document.getElementById('pip-conn');
+  const cv   = document.getElementById('val-conn');
+
+  pill.className = 'conn-pill ' + (ok ? 'ok' : 'err');
+  pip.className  = 'pip ' + (ok ? 'on' : 'err');
+  txt.textContent = ok ? 'Connected' : 'Disconnected';
+  cp.className   = 'pip ' + (ok ? 'on' : 'err');
+  cv.textContent = ok ? 'online' : 'offline';
+}
+
+function setProj(name) {
+  document.getElementById('pip-proj').className = 'pip on';
+  document.getElementById('val-proj').textContent = name.split(/[/\\]/).pop() || name;
+}
+
+ping();
+setInterval(ping, 5000);
+
+/* ── Mode ───────────────────────────────────────────────────────── */
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + m).classList.add('active');
+
+  const cfg = MODES[m];
+  document.getElementById('crumb-mode').textContent = cfg.title;
+  document.getElementById('modeBadge').textContent  = cfg.badge;
+  document.getElementById('ctxDesc').textContent    = cfg.desc;
+
+  document.getElementById('runRow').style.display     = m === 'debug' ? 'flex' : 'none';
+  document.getElementById('attachStrip').style.display = m === 'pyqa' ? 'none' : 'flex';
+  document.getElementById('chipsRow').style.display   = m === 'pyqa' ? 'none' : 'flex';
+
+  document.getElementById('msgInput').placeholder =
+    m === 'debug'   ? 'Paste a traceback or describe the runtime error…' :
+    m === 'analyze' ? 'Press Send to analyze — or specify a focus area…' :
+    m === 'pyqa'    ? 'Ask any Python question…' :
+    'Enter your query…';
+}
+
+/* ── Load folder via backend ────────────────────────────────────── */
+async function loadFolder() {
+  if (!backendUp) { sys('Backend is offline. Start server.py first.', 'err'); return; }
+  const path = document.getElementById('folderPath').value.trim();
+  if (!path) { sys('Enter a folder path.', 'warn'); return; }
+
+  const btn = document.getElementById('loadFolderBtn');
+  btn.disabled = true; btn.textContent = 'Loading…';
+
+  try {
+    const r = await fetch(`${API}/load_project`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path })
+    });
+    const d = await r.json();
+    if (!r.ok) { sys('Error: ' + d.error, 'err'); return; }
+    setProj(path);
+    sys(d.message + '\n\n' + d.files.join('\n'), 'ok');
+  } catch (e) {
+    sys('Request failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Load Folder';
+  }
+}
+
+/* ── File attach ────────────────────────────────────────────────── */
+function handleFiles(e) {
+  const toRead = Array.from(e.target.files).filter(f => !attached.find(a => a.name === f.name));
+  let done = 0;
+  if (!toRead.length) return;
+  toRead.forEach(file => {
+    const r = new FileReader();
+    r.onload = async () => {
+      attached.push({ name: file.name, content: r.result });
+      done++;
+      if (done === toRead.length) {
+        renderChips();
+        await syncFiles();
+      }
+    };
+    r.readAsText(file);
+  });
+  e.target.value = '';
+}
+
+async function syncFiles() {
+  if (!backendUp || !attached.length) return;
+  await fetch(`${API}/load_files`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: attached })
+  });
+  setProj(attached.length + ' file(s)');
+}
+
+function renderChips() {
+  document.getElementById('chipsRow').innerHTML = attached.map((f, i) => `
+    <div class="chip-item">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      ${f.name}
+      <button onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+}
+
+async function removeFile(i) {
+  attached.splice(i, 1);
+  renderChips();
+  await syncFiles();
+  if (!attached.length) {
+    document.getElementById('pip-proj').className = 'pip';
+    document.getElementById('val-proj').textContent = 'none';
+  }
+}
+
+/* ── Run file ───────────────────────────────────────────────────── */
+async function runFile() {
+  if (!backendUp) { sys('Backend offline.', 'err'); return; }
+  const f = document.getElementById('runFile').value.trim();
+  if (!f) { sys('Specify a filename to execute.', 'warn'); return; }
+
+  user('Execute: ' + f, []);
+  setBusy(true);
+
+  try {
+    const r = await fetch(`${API}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ main_file: f })
+    });
+    const d = await r.json();
+    unbusy();
+    if (!r.ok) { sys('Error: ' + d.error, 'err'); setBusy(false); return; }
+
+    let html = '';
+    if (d.stdout) html += `<div class="stdout-b">${esc(d.stdout)}</div>`;
+    if (d.stderr) html += `<div class="stderr-b">${esc(d.stderr)}</div>`;
+    if (d.analysis) html += '<br>' + fmt(d.analysis);
+    if (!d.stdout && !d.stderr) html = '<span style="color:#27ae60">Process exited cleanly with no output.</span>';
+
+    assistant(html);
+  } catch (e) {
+    unbusy();
+    sys('Request failed: ' + e.message, 'err');
+  }
+  setBusy(false);
+}
+
+/* ── Send ───────────────────────────────────────────────────────── */
+async function sendMessage() {
+  if (busy) return;
+  if (!backendUp) { sys('Backend offline. Run: python server.py', 'err'); return; }
+
+  const inp  = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text && mode !== 'analyze') return;
+
+  const snap = mode === 'pyqa' ? [] : [...attached];
+  inp.value = ''; inp.style.height = '';
+  user(text || '(full project analysis)', snap);
+  setBusy(true);
+
+  try {
+    let endpoint, body;
+
+    if (mode === 'pyqa') {
+      endpoint = 'python_qa';
+      body = { question: text };
+    } else if (mode === 'analyze') {
+      endpoint = 'analyze';
+      body = {};
+    } else if (mode === 'refactor') {
+      endpoint = 'refactor';
+      body = { focus: text };
+    } else if (mode === 'review') {
+      endpoint = 'review';
+      body = {};
+    } else {
+      endpoint = 'ask';
+      body = { question: text };
+    }
+
+    const r = await fetch(`${API}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    unbusy(); setBusy(false);
+    if (!r.ok) { sys('Error: ' + d.error, 'err'); return; }
+    assistant(fmt(d.response));
+  } catch (e) {
+    unbusy(); setBusy(false);
+    sys('Request failed: ' + e.message, 'err');
+  }
+}
+
+/* ── Render ─────────────────────────────────────────────────────── */
+function ts() { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+
+function removeEmpty() { const e = document.getElementById('emptyState'); if (e) e.remove(); }
+
+function user(text, files) {
+  removeEmpty();
+  const chips = files.map(f => `<div class="fchip"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>${f.name}</div>`).join('');
+  append(`
+    <div class="msg">
+      <div class="msg-left">
+        <div class="msg-role you">You</div>
+        <div class="msg-time">${ts()}</div>
+      </div>
+      <div class="msg-body">
+        ${chips ? `<div class="file-chips">${chips}</div>` : ''}
+        ${esc(text)}
+      </div>
+    </div>`);
+}
+
+function assistant(html) {
+  removeEmpty();
+  append(`
+    <div class="msg">
+      <div class="msg-left">
+        <div class="msg-role assist">PyAssist</div>
+        <div class="msg-time">${ts()}</div>
+      </div>
+      <div class="msg-body">${html}</div>
+    </div>`);
+}
+
+function sys(text, type = 'ok') {
+  removeEmpty();
+  const cls = { ok:'sys-ok', err:'sys-err', warn:'sys-warn' }[type] || 'sys-ok';
+  append(`
+    <div class="msg">
+      <div class="msg-left">
+        <div class="msg-role ${cls}">System</div>
+        <div class="msg-time">${ts()}</div>
+      </div>
+      <div class="msg-body" style="color:var(--text-dim)">${esc(text)}</div>
+    </div>`);
+}
+
+function append(html) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  chat.appendChild(div.firstElementChild);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function setBusy(v) {
+  busy = v;
+  document.getElementById('sendBtn').disabled = v;
+  if (v) {
+    const chat = document.getElementById('chat');
+    const el = document.createElement('div');
+    el.className = 'thinking-row'; el.id = 'thinkEl';
+    el.innerHTML = `
+      <div class="msg-left">
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
+      </div>
+      <div class="thinking-label">Processing</div>`;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+function unbusy() { const e = document.getElementById('thinkEl'); if (e) e.remove(); }
+
+/* ── Formatting ─────────────────────────────────────────────────── */
+function fmt(text) {
+  text = String(text);
+  text = text.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, c) =>
+    `<pre class="cb">${esc(c.trim())}</pre>`);
+  text = text.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  return text;
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Utilities ──────────────────────────────────────────────────── */
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+function fillPrompt(t) {
+  const i = document.getElementById('msgInput');
+  i.value = t; i.focus(); autoResize(i);
+}
+
+function clearChat() {
+  document.getElementById('chat').innerHTML = `
+    <div class="empty" id="emptyState">
+      <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
+      <div class="empty-sub">Load a project folder or attach files to begin.</div>
+      <div class="empty-grid">
+        <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
+          <div class="card-tag">Project</div>
+          <div class="card-text">Summarize this project</div>
+        </div>
+        <div class="empty-card" onclick="fillPrompt('Find all potential bugs and edge cases in this code.')">
+          <div class="card-tag">Debug</div>
+          <div class="card-text">Find potential bugs</div>
+        </div>
+        <div class="empty-card" onclick="fillPrompt('Review the code quality and suggest specific improvements.')">
+          <div class="card-tag">Review</div>
+          <div class="card-text">Full code review</div>
+        </div>
+        <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
+          <div class="card-tag">Python Q&amp;A</div>
+          <div class="card-text">No files needed</div>
+        </div>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>
