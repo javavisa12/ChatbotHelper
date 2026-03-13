@@ -15,14 +15,17 @@
   --panel:   #0d0d0d;
   --line:    #1a1a1a;
   --line2:   #242424;
-  --muted:   #444444;
+  /* brightened muted shade for better visibility */
+  --muted:   #666666;
   --ghost:   #2a2a2a;
-  --text:    #d8d4cc;
-  --text-dim:#6b6760;
+  /* using pure white as primary text color now */
+  --text:    #ffffff;
+  /* brightened text-dim for improved readability */
+  --text-dim:#8b8780;
   --red:     #c0392b;
   --red-dim: rgba(192,57,43,0.08);
   --red-mid: rgba(192,57,43,0.18);
-  --white:   #f0ece4;
+  --white:   #ffffff;
 
   --serif:   'Cormorant Garamond', Georgia, serif;
   --cond:    'Barlow Condensed', sans-serif;
@@ -35,7 +38,8 @@ html, body {
   color: var(--text);
   font-family: var(--cond);
   font-size: 18px;
-  font-weight: 400;
+  /* make all text bolder by default */
+  font-weight: 600;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0.01em;
@@ -67,7 +71,8 @@ html, body {
 .wordmark {
   font-family: var(--serif);
   font-size: 32px;
-  font-weight: 300;
+  /* bumped weight to make wordmark appear bolder */
+  font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--white);
   display: block;
@@ -77,19 +82,23 @@ html, body {
 .wordmark em {
   font-style: italic;
   color: var(--red);
+  /* ensure emphasis is also bold */
+  font-weight: 600;
 }
 
-.tagline {
+/*Python Expert*/
+
+.tagline { 
   margin-top: 6px;
   font-family: var(--cond);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--muted);
+  color:white;
 }
 
-/* Nav */
+/* Nav - workspace */
 .nav {
   padding: 16px 0;
   flex: 1;
@@ -98,15 +107,15 @@ html, body {
 
 .nav-section {
   padding: 0 20px;
-  margin-bottom: 4px;
+  margin-bottom: px;
 }
 
 .nav-label {
-  font-size: 9px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: white;
   padding: 12px 0 6px;
   display: block;
 }
@@ -161,11 +170,11 @@ html, body {
 }
 
 .load-label {
-  font-size: 9px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
+  color:white;
   display: block;
   margin-bottom: 10px;
 }
@@ -318,7 +327,7 @@ html, body {
 .chat::-webkit-scrollbar { width: 2px; }
 .chat::-webkit-scrollbar-thumb { background: var(--line2); }
 
-/* Empty state */
+/* Empty state -  Analyse,Debug,Understand */
 .empty {
   margin: auto;
   padding: 60px 40px;
@@ -342,11 +351,11 @@ html, body {
 }
 
 .empty-sub {
-  font-size: 11px;
+  font-size: 18px;
   color: var(--text-dim);
   letter-spacing: 0.06em;
   margin-bottom: 32px;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .empty-grid {
@@ -364,16 +373,17 @@ html, body {
 }
 .empty-card:hover { border-color: var(--red); background: var(--red-dim); }
 
+/*project,debug,review,python QnA*/
 .card-tag {
-  font-size: 8px;
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--red);
   margin-bottom: 4px;
 }
 .card-text {
-  font-size: 11px;
+  font-size: 15px;
   color: var(--text-dim);
   line-height: 1.4;
 }
@@ -382,7 +392,8 @@ html, body {
 /* Messages */
 .msg {
   border-bottom: 1px solid var(--line);
-  padding: 20px 28px;
+  /* more generous spacing for readability */
+  padding: 24px 32px;
   display: grid;
   grid-template-columns: 100px 1fr;
   gap: 0 20px;
@@ -401,7 +412,7 @@ html, body {
 
 .msg-role {
   font-family: var(--cond);
-  font-size: 9px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -421,7 +432,8 @@ html, body {
 }
 
 .msg-body {
-  font-size: 13px;
+  /* larger font for messages */
+  font-size: 16px;
   line-height: 1.75;
   color: var(--text);
   white-space: pre-wrap;
@@ -473,7 +485,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   border: 1px solid rgba(39,174,96,0.15);
   border-left: 2px solid #27ae60;
   padding: 10px 14px; margin: 6px 0;
-  font-family: var(--mono); font-size: 11px;
+  font-family: var(--mono); font-size: 13px;
   color: #888; white-space: pre-wrap;
   border-radius: 0 1px 1px 0;
 }
@@ -482,7 +494,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   border: 1px solid rgba(192,57,43,0.2);
   border-left: 2px solid var(--red);
   padding: 10px 14px; margin: 6px 0;
-  font-family: var(--mono); font-size: 11px;
+  font-family: var(--mono); font-size: 13px;
   color: #c0504d; white-space: pre-wrap;
   border-radius: 0 1px 1px 0;
 }
@@ -506,7 +518,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
 @keyframes pulse { 0%,100%{opacity:.15;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
 
 .thinking-label {
-  font-size: 10px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -530,10 +542,11 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   flex-wrap: wrap;
 }
 
+/*ASK (button)*/
 .mode-badge {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 3px 8px;
   border: 1px solid var(--red);
@@ -541,8 +554,9 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   border-radius: 1px;
 }
 
+/* Ask a question about your loaded project */
 .ctx-desc {
-  font-size: 10px;
+  font-size: 15px;
   color: var(--text-dim);
   letter-spacing: 0.04em;
 }
@@ -560,7 +574,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   border: 1px solid var(--line2);
   color: var(--text);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 15px;
   padding: 8px 12px;
   outline: none;
   border-radius: 1px;
@@ -575,7 +589,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   border: 1px solid var(--line2);
   color: #e67e22;
   font-family: var(--cond);
-  font-size: 10px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -595,6 +609,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   flex-wrap: wrap;
 }
 
+/* Attach Files, Attach Folder */
 .attach-pill {
   display: inline-flex;
   align-items: center;
@@ -604,7 +619,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   background: none;
   color: var(--text-dim);
   font-family: var(--cond);
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -621,7 +636,7 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 8px;
   border: 1px solid var(--line2);
-  font-size: 9px; font-family: var(--mono);
+  font-size: 19px; font-family: var(--mono);
   color: var(--muted);
   border-radius: 1px;
 }
@@ -655,7 +670,7 @@ textarea {
   outline: none;
   color: var(--text);
   font-family: var(--cond);
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 400;
   letter-spacing: 0.03em;
   line-height: 1.55;
@@ -688,6 +703,8 @@ textarea::placeholder { color: var(--muted); }
 .send-btn:hover { background: #a93226; }
 .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+
+/* Hint line (Shift+enter) */
 .hint-line {
   margin-top: 9px;
   font-size: 9px;
@@ -719,7 +736,7 @@ textarea::placeholder { color: var(--muted); }
 
     <div class="sidebar-head">
       <span class="wordmark">Py<em>Assist</em></span>
-      <span class="tagline">Python Intelligence Suite</span>
+      <span class="tagline">Python expert</span>
     </div>
 
     <nav class="nav">
@@ -1148,14 +1165,54 @@ function user(text, files) {
 
 function assistant(html) {
   removeEmpty();
-  append(`
+  // create elements so we can animate typing
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
     <div class="msg">
       <div class="msg-left">
         <div class="msg-role assist">PyAssist</div>
         <div class="msg-time">${ts()}</div>
       </div>
       <div class="msg-body">${html}</div>
-    </div>`);
+    </div>`;
+  const msgElement = wrapper.firstElementChild;
+  append(msgElement.outerHTML); // append placeholder immediately
+
+  // get the newly appended message body and type it
+  const lastMsg = document.getElementById('chat').lastElementChild;
+  const body = lastMsg.querySelector('.msg-body');
+  typeEffect(body);
+}
+
+// gradually reveal text nodes character-by-character
+function typeEffect(container) {
+  // wrap every character of text nodes in spans set to opacity 0
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node => {
+    const chars = node.textContent.split('');
+    const frag = document.createDocumentFragment();
+    chars.forEach(ch => {
+      const span = document.createElement('span');
+      span.textContent = ch;
+      span.style.opacity = 0;
+      frag.appendChild(span);
+    });
+    node.parentNode.replaceChild(frag, node);
+  });
+
+  const spans = container.querySelectorAll('span');
+  let idx = 0;
+  function reveal() {
+    if (idx < spans.length) {
+      spans[idx].style.transition = 'opacity 0.05s';
+      spans[idx].style.opacity = 1;
+      idx++;
+      setTimeout(reveal, 15);
+    }
+  }
+  reveal();
 }
 
 function sys(text, type = 'ok') {
