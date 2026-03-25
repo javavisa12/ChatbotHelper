@@ -58,6 +58,12 @@ export function toggleSidebar() {
   document.querySelector('.shell').classList.toggle('collapsed', state.sidebarCollapsed);
 }
 
+/* ── Time helper ─────────────────────────────────────────────────── */
+
+function nowTime() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 /* ── Chat message renderers ──────────────────────────────────────── */
 
 /** Append any raw HTML node to #chat. */
@@ -80,7 +86,10 @@ export function renderUserMsg(text, files = []) {
   const chips = files.map(f => `<div class="fchip">${f.name}</div>`).join('');
   append(`
     <div class="msg">
-      <div class="msg-left"><div class="msg-role you">You</div></div>
+      <div class="msg-left">
+        <div class="msg-role you">You</div>
+        <div class="msg-time">${nowTime()}</div>
+      </div>
       <div class="msg-body">
         ${chips ? `<div class="file-chips">${chips}</div>` : ''}
         ${esc(text)}
@@ -97,17 +106,20 @@ export function renderAssistantMsg(html) {
     <div class="msg">
       <div class="msg-left">
         <div class="msg-role assist">PyAssist</div>
-        <div class="msg-time">${elapsed}s</div>
+        <div class="msg-time">${nowTime()} · ${elapsed}s</div>
       </div>
       <div class="msg-body">${html}</div>
     </div>`);
 }
 
 /** System / status message. */
-export function renderSysMsg(text, type /* 'ok' | 'err' */) {
+export function renderSysMsg(text, type) {
   append(`
     <div class="msg">
-      <div class="msg-left"><div class="msg-role sys-${type}">System</div></div>
+      <div class="msg-left">
+        <div class="msg-role sys-${type}">System</div>
+        <div class="msg-time">${nowTime()}</div>
+      </div>
       <div class="msg-body" style="color:var(--text-dim)">${esc(text)}</div>
     </div>`);
 }
@@ -161,7 +173,6 @@ export function autoResize(el) {
 
 /* ── Utility ─────────────────────────────────────────────────────── */
 
-/** HTML-escape a string. */
 export function esc(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -169,7 +180,6 @@ export function esc(s) {
     .replace(/>/g, '&gt;');
 }
 
-/** Prefill the textarea (used by quick-action cards). */
 export function fillPrompt(text) {
   const inp = document.getElementById('msgInput');
   inp.value = text;
@@ -177,7 +187,6 @@ export function fillPrompt(text) {
   inp.focus();
 }
 
-/** Clear the chat area and restore the empty state placeholder. */
 export function clearChat() {
   const chat = document.getElementById('chat');
   chat.innerHTML = `
