@@ -1,0 +1,182 @@
+/* ── sidebar.css ─────────────────────────────────────────────────────
+ * Sidebar header, navigation buttons, dividers, and status box.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* ── Header ──────────────────────────────────────────────────────── */
+.sidebar-head {
+  padding: 18px 20px 20px;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  padding-right: 44px;
+}
+
+/* ── Toggle button — classic 3-line hamburger ────────────────────── */
+.sidebar-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid var(--line2);
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  transition: border-color 0.15s, background 0.15s;
+  z-index: 20;
+}
+.sidebar-toggle:hover {
+  border-color: var(--red);
+  background: var(--red-dim);
+}
+
+/* The three lines */
+.sidebar-toggle span {
+  display: block;
+  width: 13px;
+  height: 1.5px;
+  background: var(--muted);
+  border-radius: 1px;
+  transition: background 0.15s, transform 0.2s, opacity 0.2s;
+}
+.sidebar-toggle:hover span {
+  background: var(--red);
+}
+
+/* Animate to X when expanded, back to lines when collapsed 
+.shell:not(.collapsed) .sidebar-toggle span:nth-child(1) {
+  transform: translateY(5.5px) rotate(45deg);
+}
+.shell:not(.collapsed) .sidebar-toggle span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.shell:not(.collapsed) .sidebar-toggle span:nth-child(3) {
+  transform: translateY(-5.5px) rotate(-45deg);
+}*/
+
+.wordmark {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--white);
+  display: block;
+  line-height: 1;
+}
+.wordmark em {
+  font-style: italic;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.tagline {
+  margin-top: 6px;
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: white;
+}
+
+/* ── Navigation ──────────────────────────────────────────────────── */
+.nav {
+  padding: 16px 0;
+  flex: 1;
+  overflow-y: scroll;
+}
+
+.nav-section {
+  padding: 0 20px;
+}
+
+.nav-label {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: white;
+  padding: 12px 0 6px;
+  display: block;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: color 0.12s, background 0.12s;
+  text-align: left;
+  position: relative;
+}
+
+/* Active accent bar */
+.nav-btn::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 2px; height: 60%;
+  background: var(--red);
+  border-radius: 0 1px 1px 0;
+  transition: transform 0.12s;
+}
+
+.nav-btn:hover                 { color: var(--text); background: var(--ghost); }
+.nav-btn.active                { color: var(--white); background: var(--red-dim); }
+.nav-btn.active::before        { transform: translateY(-50%) scaleY(1); }
+.nav-btn.active .nav-icon      { color: var(--red); opacity: 1; }
+
+.nav-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.7; }
+
+.sidebar-divider { height: 1px; background: var(--line); margin: 4px 0; }
+
+/* ── Status box ──────────────────────────────────────────────────── */
+.status-box {
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.status-item:last-child { margin-bottom: 0; }
+
+.pip            { width: 5px; height: 5px; border-radius: 50%; background: var(--line2); flex-shrink: 0; }
+.pip.on         { background: #27ae60; box-shadow: 0 0 4px #27ae60; }
+.pip.err        { background: var(--red); }
+.pip.dim        { background: var(--muted); }
+
+.status-val {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+  font-family: var(--mono);
+  font-size: 9px;
+}

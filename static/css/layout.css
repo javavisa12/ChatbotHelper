@@ -1,0 +1,91 @@
+/* ── layout.css ──────────────────────────────────────────────────────
+ * Shell grid, sidebar, topbar, and main-area structural rules.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* ── Shell ───────────────────────────────────────────────────────── */
+.shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;       /* nothing on the shell itself scrolls */
+}
+
+/* ── Sidebar — truly fixed, never moves ─────────────────────────── */
+.sidebar {
+  width: 200px;
+  min-width: 200px;
+  flex-shrink: 0;
+  background: var(--off);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;   /* children (toggle) position against this */
+  transition: width 0.2s, min-width 0.2s;
+}
+
+.shell.collapsed .sidebar {
+  width: 60px;
+  min-width: 60px;
+}
+
+/* Hide text labels when collapsed */
+.shell.collapsed .wordmark,
+.shell.collapsed .tagline,
+.shell.collapsed .nav-label,
+.shell.collapsed .status-box span,
+.shell.collapsed .status-val { display: none; }
+
+.shell.collapsed .nav-btn {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+/* Tooltip on collapsed nav items */
+.shell.collapsed .nav-btn:hover::after {
+  content: attr(id);
+  position: absolute;
+  left: 70px;
+  background: #111;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 10px;
+  white-space: nowrap;
+  border: 1px solid #333;
+}
+
+.shell.collapsed .nav-icon { margin: 0; }
+
+/* ── Main — fills remaining width, clips overflow ────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;     /* topbar + input-area stay put */
+  min-width: 0;
+}
+
+/* Topbar — pinned inside .main, never scrolls */
+.topbar {
+  flex-shrink: 0;
+  z-index: 10;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--line);
+  background: var(--black);
+}
+
+.topbar-left  { display: flex; align-items: center; gap: 12px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+/* Utility: collapse a row without removing it from the DOM */
+.hidden-row {
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}

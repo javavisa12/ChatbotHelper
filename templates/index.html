@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>PyAssist</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
-<style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PyAssist</title>
 
-</style>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+
+  <!-- Modular CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/input.css') }}"/>
 </head>
 <body>
 
@@ -19,6 +25,9 @@
     <div class="sidebar-head">
       <span class="wordmark">Py<em>Assist</em></span>
       <span class="tagline">Python expert</span>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+        <span></span><span></span><span></span>
+      </button>
     </div>
 
     <nav class="nav">
@@ -33,11 +42,6 @@
         <button class="nav-btn" id="btn-analyze" onclick="setMode('analyze')">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 21V9"/></svg>
           Analyze Project
-        </button>
-
-        <button class="nav-btn" id="btn-debug" onclick="setMode('debug')">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4M12 16h.01"/></svg>
-          Debug &amp; Run
         </button>
 
         <button class="nav-btn" id="btn-review" onclick="setMode('review')">
@@ -63,12 +67,6 @@
       </div>
     </nav>
 
-    <div class="load-box">
-      <span class="load-label">Load Project Folder</span>
-      <input class="load-input" id="folderPath" placeholder="/path/to/project"
-        onkeydown="if(event.key==='Enter') loadFolder()"/>
-      <button class="load-btn" id="loadFolderBtn" onclick="loadFolder()">Load Folder</button>
-    </div>
 
     <div class="status-box">
       <div class="status-item">
@@ -104,6 +102,10 @@
       </div>
       <div class="topbar-right">
         <button class="btn-ghost" onclick="clearChat()">Clear</button>
+        <select id="modelSelect" class="btn-ghost" onchange="changeModel()">
+          <option value="phi3">Phi-3 (Accurate)</option>
+          <option value="tinyllama">TinyLlama (Fast)</option>
+        </select>
       </div>
     </div>
 
@@ -111,7 +113,7 @@
     <div class="chat" id="chat">
       <div class="empty" id="emptyState">
         <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
-        <div class="empty-sub">Load a project folder or attach files to begin.</div>
+        <div class="empty-sub">Attach files to begin.</div>
         <div class="empty-grid">
           <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
             <div class="card-tag">Project</div>
@@ -141,26 +143,19 @@
         <span class="ctx-desc" id="ctxDesc">Ask a question about your loaded project</span>
       </div>
 
-      <!-- Run row — debug only -->
-      <div class="run-row" id="runRow" style="display:none">
-        <input class="run-input" id="runFile" placeholder="main.py"
-          onkeydown="if(event.key==='Enter') runFile()"/>
-        <button class="run-btn" onclick="runFile()">&#9654; Execute</button>
-      </div>
-
       <!-- Attach strip -->
       <div class="attach-strip" id="attachStrip">
         <button class="attach-pill" onclick="document.getElementById('fileInput').click()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           Attach Files
         </button>
-        <button class="attach-pill" onclick="document.getElementById('folderInput').click()">
+        <button class="attach-pill" onclick="attachFolder()">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Attach Folder
         </button>
       </div>
 
-      <!-- Attached chips -->
+      <!-- Attached file chips -->
       <div class="chips-row" id="chipsRow"></div>
 
       <!-- Composer -->
@@ -183,15 +178,18 @@
   </main>
 </div>
 
+
+ 
+
+<!-- Hidden file inputs -->
 <input type="file" id="fileInput" multiple
   accept=".py,.txt,.json,.md,.yaml,.yml,.toml,.cfg,.ini,.js,.ts,.html,.css,.csv"
   onchange="handleFiles(event)"/>
 <input type="file" id="folderInput" multiple webkitdirectory
   onchange="handleFiles(event)"/>
 
-<head>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+<!-- ES Module entry point -->
+<script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+
 </body>
+</html>

@@ -1,0 +1,44 @@
+/* ── base.css ────────────────────────────────────────────────────────
+ * CSS custom-properties, reset, and base element styles.
+ * ─────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --off:      #25303c;
+  --black:    #202020;
+  --panel:    #0d0d0d;
+  --line:     #1a1a1a;
+  --line2:    #242424;
+  --muted:    #666666;
+  --ghost:    #2a2a2a;
+  --text:     #ffffff;
+  --text-dim: #8b8780;
+  --red:      #c0392b;
+  --red-dim:  rgba(192,57,43,0.08);
+  --red-mid:  rgba(192,57,43,0.18);
+  --white:    #ffffff;
+
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --cond:  'Barlow Condensed', sans-serif;
+  --mono:  'JetBrains Mono', monospace;
+}
+
+html, body {
+  height: 100%;
+  background: var(--black);
+  color: var(--text);
+  font-family: var(--cond);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 2px; height: 2px; }
+::-webkit-scrollbar-thumb { background: var(--line2); }
+
+/* Hidden file inputs */
+#fileInput, #folderInput { display: none; }
