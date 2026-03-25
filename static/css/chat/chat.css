@@ -1,0 +1,126 @@
+/* ── chat.css ────────────────────────────────────────────────────────
+ * Chat area: empty state, message bubbles, code blocks, thinking dots.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* ── Topbar widgets ──────────────────────────────────────────────── */
+.mode-crumb {
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mode-crumb b { color: var(--white); font-weight: 600; }
+
+.conn-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--line2);
+  border-radius: 1px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.conn-pill.ok  { border-color: rgba(39,174,96,0.25); color: #27ae60; }
+.conn-pill.err { border-color: rgba(192,57,43,0.3);  color: var(--red); }
+
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--line2);
+  color: var(--muted);
+  font-family: var(--cond);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 1px;
+  transition: all 0.12s;
+}
+.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Chat scroll container ───────────────────────────────────────── */
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 0;
+  min-height: 0;
+}
+.chat::-webkit-scrollbar       { width: 2px; }
+.chat::-webkit-scrollbar-thumb { background: var(--line2); }
+
+
+
+.file-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.fchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--line2);
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  border-radius: 1px;
+}
+
+/* ── Code inside msg-body ────────────────────────────────────────── */
+.msg-body code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  padding: 1px 5px;
+  border-radius: 1px;
+  color: #e06c75;
+  letter-spacing: 0;
+}
+
+
+
+pre.cb {
+  border: none !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  background: transparent !important;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #abb2bf;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
+pre.cb::-webkit-scrollbar       { height: 2px; } /*pre-code block*/
+pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
+
+/* stdout / stderr blocks */
+.stdout-b {
+  background: rgba(39,174,96,0.04);
+  border: 1px solid rgba(39,174,96,0.15);
+  border-left: 2px solid #27ae60;
+  padding: 10px 14px; margin: 6px 0;
+  font-family: var(--mono); font-size: 13px;
+  color: #888; white-space: pre-wrap;
+  border-radius: 0 1px 1px 0;
+}
+.stderr-b {
+  background: rgba(192,57,43,0.05);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-left: 2px solid var(--red);
+  padding: 10px 14px; margin: 6px 0;
+  font-family: var(--mono); font-size: 13px;
+  color: #c0504d; white-space: pre-wrap;
+  border-radius: 0 1px 1px 0;
+}
+

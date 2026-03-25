@@ -8,12 +8,18 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
 
-  <!-- Modular CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}"/>
+  <!-- Modular CSS — paths match static/css/ folder structure -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/base.css') }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/input.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/empty-card/empty-card.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/chat.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-block.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-copy.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-download.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/message/message.css') }}"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/thinking/thinking.css') }}"/>
 </head>
 <body>
 
@@ -66,7 +72,6 @@
         </button>
       </div>
     </nav>
-
 
     <div class="status-box">
       <div class="status-item">
@@ -177,9 +182,6 @@
 
   </main>
 </div>
-
-
- 
 
 <!-- Hidden file inputs -->
 <input type="file" id="fileInput" multiple

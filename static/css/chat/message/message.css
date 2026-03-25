@@ -1,0 +1,62 @@
+/* ── Messages ────────────────────────────────────────────────────── */
+.msg {
+  border-bottom: 1px solid var(--muted);
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 0 12px;
+  position: relative;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+.msg:last-child { border-bottom: none; }
+
+.msg:has(.msg-role.you)    { border-left: 3px solid var(--red); }
+.msg:has(.msg-role.assist) { border-left: 3px solid var(--line2); }
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-left    { 
+
+  padding-top: 2px; 
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+}
+
+.msg-role {
+  font-family: var(--cond);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.msg-role.you      { color: var(--red); }
+.msg-role.assist   { color: var(--muted); }
+.msg-role.sys-ok   { color: #27ae60; }
+.msg-role.sys-err  { color: var(--red); }
+.msg-role.sys-warn { color: #e67e22; }
+
+.msg-time {
+  font-size: 9px;
+  color: #888;
+  margin-top: 3px;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.response-time { color: var(--red); font-weight: 600; margin-left: 4px; }
+
+.msg-body {
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+  max-width: 700px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

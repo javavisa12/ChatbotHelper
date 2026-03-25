@@ -1,0 +1,52 @@
+/* ── Empty / splash state ────────────────────────────────────────── */
+.empty {
+  margin: auto;
+  padding: 60px 40px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.empty-heading {
+  font-family: var(--serif);
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--white);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.empty-heading em { font-style: italic; color: var(--red); }
+
+.empty-sub {
+  font-size: 18px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-bottom: 32px;
+  font-weight: 600;
+}
+
+.empty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.empty-card {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  border-radius: 1px;
+}
+.empty-card:hover          { border-color: var(--red); background: var(--red-dim); }
+.empty-card:hover .card-text { color: var(--text); }
+
+.card-tag {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 4px;
+}
+.card-text { font-size: 15px; color: var(--text-dim); line-height: 1.4; }
