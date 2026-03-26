@@ -51,9 +51,10 @@ export async function loadFiles(files, model) {
  * @param {string} model         Selected model key
  * @returns {{ response: string }}
  */
-export async function query(mode, text, model) {
+export async function query(mode, text, model, messages) {
   const endpoint = mode === 'pyqa' ? 'python_qa' : mode;
-  const body     = { model };
+
+  const body = { model, messages }; // ✅ include messages
 
   if (mode === 'pyqa' || mode === 'ask')  body.question = text;
   if (mode === 'refactor')                body.focus    = text;

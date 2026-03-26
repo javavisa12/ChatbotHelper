@@ -26,11 +26,34 @@ def get_models():
 @general.route("/api/python_qa", methods=["POST"])
 def python_qa():
     data = request.json or {}
+
+    messages = data.get("messages")  # ✅ NEW
     question = data.get("question", "").strip()
-    
-    if not question:
+
+    if not question and not messages:
         return jsonify({"error": "Question is empty."}), 400
 
+    # ✅ If messages exist → use memory mode
+    if messages:
+        # inject system prompt at the top
+        system_prompt = {
+            "role": "system",
+            "content": (
+                "You are a senior Python engineer.\n"
+                "Answer clearly and concisely.\n"
+                "Rules:\n"
+                "- Short explanation (1-2 sentences)\n"
+                "- Provide working code\n"
+                "- Clean code"
+            )
+        }
+
+        # ensure system prompt is always first
+        messages[0] = system_prompt
+
+        return jsonify({"response": chat(messages)})
+
+    # ✅ fallback (no memory, old behavior)
     prompt = f"""
 You are a senior Python engineer.
 Answer clearly and concisely.
