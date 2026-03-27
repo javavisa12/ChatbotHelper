@@ -28,7 +28,7 @@
 /* ── Light mode overrides ────────────────────────────────────────── */
 body.light {
   --off:      #f0f0f0;
-  --black:    #ffffff;
+  --black:    #d2d0d0;
   --panel:    #f7f7f7;
   --line:     #e0e0e0;
   --line2:    #d0d0d0;
@@ -55,19 +55,3 @@ html, body {
   transition: background 0.2s, color 0.2s;
 }
 
-/* ── Theme toggle button ─────────────────────────────────────────── */
-.theme-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  padding: 5px;
-}
-.theme-btn svg { display: block; }
-
-/* Scrollbar */
-::-webkit-scrollbar       { width: 2px; height: 2px; }
-::-webkit-scrollbar-thumb { background: var(--line2); }
-
-/* Hidden file inputs */
-#fileInput, #folderInput { display: none; }

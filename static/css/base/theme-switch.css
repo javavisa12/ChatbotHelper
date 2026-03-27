@@ -1,0 +1,17 @@
+/* ── Theme toggle ────────────────────────────────────────────────── */
+/* ── Theme toggle button ─────────────────────────────────────────── */
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  padding: 5px;
+}
+.theme-btn svg { display: block; }
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 2px; height: 2px; }
+::-webkit-scrollbar-thumb { background: var(--line2); }
+
+/* Hidden file inputs */
+#fileInput, #folderInput { display: none; }
