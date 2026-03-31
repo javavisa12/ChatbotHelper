@@ -68,3 +68,11 @@ Traceback (most recent call last):
   File "/home/PBB/mia66375/.local/lib/python3.9/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
     raise mapped_exc(message) from exc
 httpx.ConnectError: [Errno -2] Name or service not known
+    response = transport.handle_request(request)
+  File "/home/PBB/mia66375/.local/lib/python3.9/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/usr/lib64/python3.9/contextlib.py", line 137, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/home/PBB/mia66375/.local/lib/python3.9/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [Errno -2] Name or service not known
