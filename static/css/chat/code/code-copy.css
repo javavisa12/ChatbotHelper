@@ -8,12 +8,15 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 2px 10px 2px 6px; /* slightly left-aligned */
+  padding: 2px 8px; /* slightly left-aligned */
   cursor: pointer;
   border-radius: 1px;
   transition: all 0.2s ease;
   width: 32px;
   height: 28px;
+  min-width: 60px;
+  white-space: nowrap;
+
 }
 
 .code-copy-btn::before {

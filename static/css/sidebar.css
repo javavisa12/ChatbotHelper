@@ -49,19 +49,8 @@
   background: var(--red);
 }
 
-/* Animate to X when expanded, back to lines when collapsed 
-.shell:not(.collapsed) .sidebar-toggle span:nth-child(1) {
-  transform: translateY(5.5px) rotate(45deg);
-}
-.shell:not(.collapsed) .sidebar-toggle span:nth-child(2) {
-  opacity: 0;
-  transform: scaleX(0);
-}
-.shell:not(.collapsed) .sidebar-toggle span:nth-child(3) {
-  transform: translateY(-5.5px) rotate(-45deg);
-}*/
 
-.wordmark {
+.wordmark {       /*pyassist*/
   font-family: var(--serif);
   font-size: 32px;
   font-weight: 600;
@@ -76,14 +65,14 @@
   font-weight: 600;
 }
 
-.tagline {
+.tagline { /*python-expert*/
   margin-top: 6px;
   font-family: var(--cond);
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: white;
+  color: var(--red);
 }
 
 /* ── Navigation ──────────────────────────────────────────────────── */
@@ -102,7 +91,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: white;
+  color: var(--red);
   padding: 12px 0 6px;
   display: block;
 }

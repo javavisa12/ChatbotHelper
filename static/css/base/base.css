@@ -4,6 +4,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Dark mode (default) ─────────────────────────────────────────── */
 :root {
   --off:      #25303c;
   --black:    #202020;
@@ -24,6 +25,23 @@
   --mono:  'JetBrains Mono', monospace;
 }
 
+/* ── Light mode overrides ────────────────────────────────────────── */
+body.light {
+  --off:      #f0f0f0;
+  --black:    #d2d0d0;
+  --panel:    #f7f7f7;
+  --line:     #e0e0e0;
+  --line2:    #d0d0d0;
+  --muted:    #888888;
+  --ghost:    #eeeeee;
+  --text:     #111111;
+  --text-dim: #555555;
+  --red:      #c0392b;
+  --red-dim:  rgba(192,57,43,0.08);
+  --red-mid:  rgba(192,57,43,0.18);
+  --white:    #111111;
+}
+
 html, body {
   height: 100%;
   background: var(--black);
@@ -34,11 +52,6 @@ html, body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   letter-spacing: 0.01em;
+  transition: background 0.2s, color 0.2s;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar       { width: 2px; height: 2px; }
-::-webkit-scrollbar-thumb { background: var(--line2); }
-
-/* Hidden file inputs */
-#fileInput, #folderInput { display: none; }
