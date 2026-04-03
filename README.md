@@ -1,329 +1,318 @@
-- Run app.py (port:5000)
-- runtime : llama_cpp_python
-- model : tinyllama, phi-3 mini 
-
-both run in same port number 
-
-
 from __future__ import annotations
 
 import json
 import logging
-import os
 import queue
 import time
-import uuid
-from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
 
-from app.core.auth import check_internal_secret
-from app.core.config import KNOWN_HELPER_IDS, MAX_TEMPERATURE, MAX_TOKENS_LIMIT, MIN_TEMPERATURE
-from app.core.state import get_model_id, track_helper_request
-from app.schemas.models import InferenceRequest, InferenceResponse
-from app.services.pool import checkout_llm
+from app.core.config import (
+    HELPER_CAPACITY_POLICY,
+    MAX_TEMPERATURE,
+    MAX_TOKENS_LIMIT,
+    MIN_TEMPERATURE,
+    N_LLM_INSTANCES,
+    TEST_FALLBACK_TEXT,
+    TEST_MAX_TOKENS,
+    TEST_PROMPT,
+    TEST_TEMPERATURE,
+)
+from app.core.constants import LLM_AVAILABLE
+from app.core.state import helper_counts_snapshot
+from app.services.pool import checkout_llm, pool_status
 
 logger = logging.getLogger("llm_loader.main")
 router = APIRouter()
 
 
-def _utc_ts() -> str:
-    return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="milliseconds")
+@router.get("/liveness")
+def liveness() -> dict:
+    return {"status": "alive"}
 
 
-def _log_metrics_table(request_id: str, table_title: str, rows: list[tuple[str, str]]) -> None:
-    if not rows:
-        return
-    metric_col_width = max(len("Metric"), *(len(metric) for metric, _ in rows))
-    value_col_width = max(len("Value"), *(len(value) for _, value in rows))
-    border = f"+-{'-' * metric_col_width}-+-{'-' * value_col_width}-+"
-    lines = [
-        f"{table_title} (request_id={request_id})",
-        border,
-        f"| {'Metric'.ljust(metric_col_width)} | {'Value'.ljust(value_col_width)} |",
-        border,
-    ]
-    lines.extend(
-        f"| {metric.ljust(metric_col_width)} | {value.ljust(value_col_width)} |"
-        for metric, value in rows
-    )
-    lines.append(border)
-    logger.info("\n%s", "\n".join(lines))
-
-
-def _process_rss_mb() -> float | None:
-    try:
-        with open("/proc/self/status", "r", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        return int(parts[1]) / 1024.0
-    except Exception:
-        return None
-    return None
-
-
-def _proc_cpu_seconds() -> float:
-    t = os.times()
-    return t.user + t.system
-
-
-def _resource_delta(cpu_start: float, wall_start: float) -> dict[str, float | None]:
-    cpu_end = _proc_cpu_seconds()
-    wall_end = time.perf_counter()
-    cpu_delta = max(cpu_end - cpu_start, 0.0)
-    wall_delta = max(wall_end - wall_start, 1e-9)
-    avg_cores = cpu_delta / wall_delta
-    cpu_count = os.cpu_count() or 1
-    pct_of_single_core = avg_cores * 100.0
-    pct_of_total_cpu = (avg_cores / cpu_count) * 100.0
-    rss_mb = _process_rss_mb()
+@router.get("/health")
+def health() -> dict:
+    status = pool_status()
     return {
-        "cpu_count": float(cpu_count),
-        "cpu_delta": cpu_delta,
-        "wall_delta": wall_delta,
-        "avg_cores": avg_cores,
-        "pct_of_single_core": pct_of_single_core,
-        "pct_of_total_cpu": pct_of_total_cpu,
-        "rss_mb": rss_mb,
+        "status": "ok" if status["pool_total"] > 0 else "no_model",
+        "llm_available": LLM_AVAILABLE,
+        **status,
+        "helper_capacity_policy": HELPER_CAPACITY_POLICY,
+        "helper_request_counts": helper_counts_snapshot(),
     }
 
 
-def _safe_usage_fields(result: dict) -> tuple[int | None, int | None, int | None]:
-    usage = result.get("usage")
-    if not isinstance(usage, dict):
-        return None, None, None
-    prompt_toks = usage.get("prompt_tokens")
-    completion_toks = usage.get("completion_tokens")
-    total_toks = usage.get("total_tokens")
-    return (
-        prompt_toks if isinstance(prompt_toks, int) else None,
-        completion_toks if isinstance(completion_toks, int) else None,
-        total_toks if isinstance(total_toks, int) else None,
-    )
+@router.get("/test")
+def test_inference() -> dict:
+    status = pool_status()
+    model_loaded = status.get("pool_total", 0) > 0
 
-
-@router.post("/v1/generate")
-def generate_endpoint(
-    req: InferenceRequest,
-    _: None = Depends(check_internal_secret),
-) -> object:
-    max_tokens = min(max(req.max_tokens, 1), MAX_TOKENS_LIMIT)
-    temperature = min(max(req.temperature, MIN_TEMPERATURE), MAX_TEMPERATURE)
-
-    if req.helper_id:
-        if req.helper_id not in KNOWN_HELPER_IDS:
-            logger.warning("Unknown helper_id=%s - not in KNOWN_HELPER_IDS", req.helper_id)
-        track_helper_request(req.helper_id)
-
-    req_id = f"gen-{uuid.uuid4().hex}"
-    created = int(time.time())
-    received_ts = _utc_ts()
-    req_cpu_start = _proc_cpu_seconds()
-    req_wall_start = time.perf_counter()
-
-    logger.info(
-        "REQ id=%s ts=%s helper=%s stream=%s",
-        req_id,
-        received_ts,
-        req.helper_id or "-",
-        int(req.stream),
-    )
-    cpu_count = os.cpu_count() or 1
-    rss_start_mb = _process_rss_mb()
-
-    logger.debug(
-        "Inference request: helper_id=%s stream=%s max_tokens=%d temperature=%.2f",
-        req.helper_id,
-        req.stream,
-        max_tokens,
-        temperature,
-    )
-
-    if req.stream:
-        return StreamingResponse(
-            _stream_sse(
-                req_id,
-                req.prompt,
-                max_tokens,
-                temperature,
-                req.stop,
-                req.helper_id,
-                req_cpu_start,
-                req_wall_start,
-                received_ts,
-                rss_start_mb,
-            ),
-            media_type="text/event-stream",
-            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-        )
+    if not model_loaded:
+        return {
+            "status": "fallback",
+            "model_loaded": False,
+            "prompt": TEST_PROMPT,
+            "response": TEST_FALLBACK_TEXT,
+        }
 
     try:
-        t_checkout_start = time.perf_counter()
         with checkout_llm() as llm:
-            t_checkout_acquired = time.perf_counter()
-            queue_wait_s = t_checkout_acquired - t_checkout_start
-            logger.info("OUT id=%s ts=%s stream=0", req_id, _utc_ts())
-            t_infer_start = time.perf_counter()
             result = llm(
-                req.prompt,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                stop=req.stop,
+                TEST_PROMPT,
+                max_tokens=max(1, TEST_MAX_TOKENS),
+                temperature=max(0.0, TEST_TEMPERATURE),
+                stop=[],
                 stream=False,
             )
-            t_infer_end = time.perf_counter()
-        text = result["choices"][0]["text"].strip()
-        finish_reason = result["choices"][0].get("finish_reason") or "stop"
-        prompt_toks, completion_toks, total_toks = _safe_usage_fields(result)
-        usage = _resource_delta(req_cpu_start, req_wall_start)
-        _log_metrics_table(
-            req_id,
-            "llm_loader request summary (non-streaming)",
-            [
-                ("Request received timestamp (UTC)", received_ts),
-                ("Helper identifier", req.helper_id or "-"),
-                ("Detected CPU core count in container", str(cpu_count)),
-                (
-                    "Resident memory usage at request start in megabytes",
-                    "unknown" if rss_start_mb is None else f"{rss_start_mb:.1f}",
-                ),
-                ("Prompt length in characters", str(len(req.prompt))),
-                ("Time waiting for an available model instance in seconds", f"{queue_wait_s:.3f}"),
-                ("Model inference time in seconds", f"{(t_infer_end - t_infer_start):.3f}"),
-                ("Total llm_loader time for this request in seconds", f"{(t_infer_end - req_wall_start):.3f}"),
-                ("Prompt token count reported by model", str(prompt_toks) if prompt_toks is not None else "not available"),
-                (
-                    "Completion token count reported by model",
-                    str(completion_toks) if completion_toks is not None else "not available",
-                ),
-                ("Total token count reported by model", str(total_toks) if total_toks is not None else "not available"),
-                ("Response length in characters", str(len(text))),
-                (
-                    "Total process CPU time consumed during request in seconds",
-                    f"{usage['cpu_delta']:.3f}",
-                ),
-                ("Average CPU cores used during request", f"{usage['avg_cores']:.2f}"),
-                (
-                    "Average CPU usage as percentage of all detected cores",
-                    f"{usage['pct_of_total_cpu']:.2f}",
-                ),
-                (
-                    "Resident memory usage at request end in megabytes",
-                    "unknown" if usage["rss_mb"] is None else f"{usage['rss_mb']:.1f}",
-                ),
-            ],
-        )
+        text = (result["choices"][0]["text"] or "").strip()
+        return {
+            "status": "ok",
+            "model_loaded": True,
+            "prompt": TEST_PROMPT,
+            "response": text or "(empty response)",
+        }
     except queue.Empty:
-        logger.warning("Pool exhausted - helper_id=%s rejected", req.helper_id)
-        raise HTTPException(status_code=503, detail="LLM pool exhausted - try again later")
+        return {
+            "status": "busy",
+            "model_loaded": True,
+            "prompt": TEST_PROMPT,
+            "response": "LLM pool exhausted - try again shortly",
+        }
     except Exception as exc:
-        logger.error("LLM inference error (helper_id=%s): %s", req.helper_id, exc)
-        raise HTTPException(status_code=500, detail=f"LLM inference error: {exc}")
-
-    return InferenceResponse(
-        id=req_id,
-        model=get_model_id(),
-        created=created,
-        text=text,
-        finish_reason=finish_reason,
-    )
+        logger.error("Test inference failed: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Test inference failed: {exc}")
 
 
-def _stream_sse(
-    req_id: str,
+def _concurrent_worker(
+    worker_index: int,
     prompt: str,
     max_tokens: int,
     temperature: float,
-    stop: list[str],
-    helper_id: str,
-    req_cpu_start: float,
-    req_wall_start: float,
-    received_ts: str,
-    rss_start_mb: float | None,
-):
-    emitted_first_token = False
-    first_token_wall_s: float | None = None
-    emitted_chars = 0
-    queue_wait_s: float | None = None
-    t_checkout_start = time.perf_counter()
-    logger.info(
-        "Streaming request processing started inside llm_loader (request_id=%s, request_received_timestamp=%s)",
-        req_id,
-        received_ts,
+    event_queue: queue.Queue,
+) -> None:
+    start_ts = time.time()
+    start_perf = time.perf_counter()
+    event_queue.put(
+        {
+            "event": "queued",
+            "worker_index": worker_index,
+            "timestamp": start_ts,
+            "message": f"Worker {worker_index} queued for model checkout",
+        }
     )
+
     try:
         with checkout_llm() as llm:
-            t_checkout_acquired = time.perf_counter()
-            queue_wait_s = t_checkout_acquired - t_checkout_start
-            try:
-                for raw in llm(
-                    prompt,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    stop=stop,
-                    stream=True,
-                ):
-                    token = raw["choices"][0]["text"]
-                    if token:
-                        if not emitted_first_token:
-                            logger.info(
-                                "OUT id=%s ts=%s stream=1",
-                                req_id,
-                                _utc_ts(),
-                            )
-                            first_token_wall_s = time.perf_counter() - req_wall_start
-                            emitted_first_token = True
-                        emitted_chars += len(token)
-                        yield "data: " + json.dumps({"text": token}) + "\n\n"
-            except Exception as exc:
-                logger.error("LLM stream error (helper_id=%s): %s", helper_id, exc)
-                yield "data: " + json.dumps({"text": f"\n\n[Error: {exc}]"}) + "\n\n"
+            acquired_perf = time.perf_counter()
+            queue_wait_seconds = acquired_perf - start_perf
+            event_queue.put(
+                {
+                    "event": "acquired",
+                    "worker_index": worker_index,
+                    "timestamp": time.time(),
+                    "queue_wait_seconds": round(queue_wait_seconds, 3),
+                    "message": f"Worker {worker_index} acquired model after {queue_wait_seconds:.3f}s",
+                }
+            )
+
+            result = llm(
+                prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stop=[],
+                stream=False,
+            )
+            text = (result["choices"][0]["text"] or "").strip()
+            total_seconds = time.perf_counter() - start_perf
+            event_queue.put(
+                {
+                    "event": "done",
+                    "worker_index": worker_index,
+                    "timestamp": time.time(),
+                    "status": "ok",
+                    "queue_wait_seconds": round(queue_wait_seconds, 3),
+                    "total_seconds": round(total_seconds, 3),
+                    "response_chars": len(text),
+                    "message": f"Worker {worker_index} done in {total_seconds:.3f}s",
+                }
+            )
     except queue.Empty:
-        logger.warning("Pool exhausted during stream - helper_id=%s", helper_id)
-        yield "data: " + json.dumps({"error": "LLM pool exhausted"}) + "\n\n"
-    finally:
-        total_loader_s = time.perf_counter() - req_wall_start
-        usage = _resource_delta(req_cpu_start, req_wall_start)
-        _log_metrics_table(
-            req_id,
-            "llm_loader request summary (streaming)",
-            [
-                ("Request received timestamp (UTC)", received_ts),
-                ("Helper identifier", helper_id or "-"),
-                ("Detected CPU core count in container", str(os.cpu_count() or 1)),
-                (
-                    "Resident memory usage at request start in megabytes",
-                    "unknown" if rss_start_mb is None else f"{rss_start_mb:.1f}",
-                ),
-                ("Prompt length in characters", str(len(prompt))),
-                (
-                    "Time waiting for an available model instance in seconds",
-                    f"{queue_wait_s:.3f}" if queue_wait_s is not None else "not available",
-                ),
-                (
-                    "Time from request arrival to first streamed token in seconds",
-                    f"{first_token_wall_s:.3f}" if first_token_wall_s is not None else "not available",
-                ),
-                ("Total llm_loader time for this request in seconds", f"{total_loader_s:.3f}"),
-                ("Total streamed response length in characters", str(emitted_chars)),
-                (
-                    "Total process CPU time consumed during request in seconds",
-                    f"{usage['cpu_delta']:.3f}",
-                ),
-                ("Average CPU cores used during request", f"{usage['avg_cores']:.2f}"),
-                (
-                    "Average CPU usage as percentage of all detected cores",
-                    f"{usage['pct_of_total_cpu']:.2f}",
-                ),
-                (
-                    "Resident memory usage at request end in megabytes",
-                    "unknown" if usage["rss_mb"] is None else f"{usage['rss_mb']:.1f}",
-                ),
-            ],
+        total_seconds = time.perf_counter() - start_perf
+        event_queue.put(
+            {
+                "event": "done",
+                "worker_index": worker_index,
+                "timestamp": time.time(),
+                "status": "pool_timeout",
+                "total_seconds": round(total_seconds, 3),
+                "response_chars": 0,
+                "message": f"Worker {worker_index} timed out waiting for model ({total_seconds:.3f}s)",
+            }
+        )
+    except Exception as exc:
+        total_seconds = time.perf_counter() - start_perf
+        event_queue.put(
+            {
+                "event": "done",
+                "worker_index": worker_index,
+                "timestamp": time.time(),
+                "status": "error",
+                "total_seconds": round(total_seconds, 3),
+                "response_chars": 0,
+                "error": str(exc),
+                "message": f"Worker {worker_index} failed: {exc}",
+            }
         )
 
+
+def _sse_line(payload: dict) -> str:
+    return "data: " + json.dumps(payload) + "\n\n"
+
+
+def _stream_concurrent_test(
+    concurrency: int,
+    prompt: str,
+    max_tokens: int,
+    temperature: float,
+):
+    status = pool_status()
+    if status.get("pool_total", 0) <= 0:
+        yield _sse_line(
+            {
+                "event": "summary",
+                "status": "no_model",
+                "message": "No model instances loaded in pool",
+            }
+        )
+        yield "data: [DONE]\n\n"
+        return
+
+    started_perf = time.perf_counter()
+    event_queue: queue.Queue = queue.Queue()
+    yield _sse_line(
+        {
+            "event": "start",
+            "status": "running",
+            "concurrency": concurrency,
+            "configured_n_llm_instances": N_LLM_INSTANCES,
+            "pool_total": status.get("pool_total", 0),
+            "pool_idle_at_start": status.get("pool_idle", 0),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "prompt_chars": len(prompt),
+            "message": "Concurrent test started",
+        }
+    )
+
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = [
+            executor.submit(
+                _concurrent_worker,
+                i + 1,
+                prompt,
+                max_tokens,
+                temperature,
+                event_queue,
+            )
+            for i in range(concurrency)
+        ]
+
+        completed_workers = 0
+        ok_count = 0
+        timeout_count = 0
+        error_count = 0
+        durations: list[float] = []
+        queue_waits: list[float] = []
+
+        while completed_workers < concurrency:
+            event = event_queue.get()
+            yield _sse_line(event)
+            if event.get("event") != "done":
+                continue
+            completed_workers += 1
+            worker_status = str(event.get("status", "error"))
+            if worker_status == "ok":
+                ok_count += 1
+            elif worker_status == "pool_timeout":
+                timeout_count += 1
+            else:
+                error_count += 1
+            if "total_seconds" in event:
+                durations.append(float(event["total_seconds"]))
+            if "queue_wait_seconds" in event:
+                queue_waits.append(float(event["queue_wait_seconds"]))
+
+        for fut in futures:
+            try:
+                fut.result()
+            except Exception:
+                pass
+
+    total_elapsed = time.perf_counter() - started_perf
+    summary = {
+        "event": "summary",
+        "status": "completed",
+        "concurrency": concurrency,
+        "completed_workers": completed_workers,
+        "ok_count": ok_count,
+        "pool_timeout_count": timeout_count,
+        "error_count": error_count,
+        "total_test_seconds": round(total_elapsed, 3),
+        "avg_worker_total_seconds": round(sum(durations) / len(durations), 3) if durations else None,
+        "avg_queue_wait_seconds": round(sum(queue_waits) / len(queue_waits), 3) if queue_waits else None,
+        "message": "Concurrent test finished",
+    }
+    yield _sse_line(summary)
     yield "data: [DONE]\n\n"
-    response = transport.handle_request(request)
+
+
+@router.get("/test_concurrent")
+def test_concurrent(
+    concurrency: int = N_LLM_INSTANCES,
+    prompt: str = TEST_PROMPT,
+    max_tokens: int = 128,
+    temperature: float = TEST_TEMPERATURE,
+) -> StreamingResponse:
+    if concurrency < 1 or concurrency > 128:
+        raise HTTPException(status_code=400, detail="concurrency must be between 1 and 128")
+    bounded_max_tokens = min(max(max_tokens, 1), MAX_TOKENS_LIMIT)
+    bounded_temperature = min(max(temperature, MIN_TEMPERATURE), MAX_TEMPERATURE)
+
+    return StreamingResponse(
+        _stream_concurrent_test(
+            concurrency=concurrency,
+            prompt=prompt,
+            max_tokens=bounded_max_tokens,
+            temperature=bounded_temperature,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/dashboard", response_class=FileResponse)
+def dashboard() -> FileResponse:
+    dashboard_path = Path(__file__).resolve().parents[1] / "frontend" / "dashboard.html"
+    if not dashboard_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard file not found")
+    return FileResponse(dashboard_path)
+
+
+@router.get("/style.css", response_class=FileResponse)
+def dashboard_css() -> FileResponse:
+    css_path = Path(__file__).resolve().parents[1] / "frontend" / "style.css"
+    if not css_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard css not found")
+    return FileResponse(css_path, media_type="text/css")
+
+
+@router.get("/app.js", response_class=FileResponse)
+def dashboard_js() -> FileResponse:
+    js_path = Path(__file__).resolve().parents[1] / "frontend" / "app.js"
+    if not js_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard js not found")
+    return FileResponse(js_path, media_type="application/javascript")
