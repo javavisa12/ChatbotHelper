@@ -1,42 +1,41 @@
+'''General routes for Python Assistant.'''
+
 from flask import Blueprint, jsonify, request, render_template
-from config import DEFAULT_MODEL, MODELS
+from config import DEFAULT_MODEL
 from llm.chat import chat
+from llm.model import health_check
 
 general = Blueprint("general", __name__)
 
+
 @general.route("/")
 def index():
-    # Removed request.json access because GET requests have no body
     return render_template("index.html")
+
 
 @general.route("/api/status", methods=["GET"])
 def status():
-    # Corrected variable to DEFAULT_MODEL from config.py
+    health = health_check()
     return jsonify({
         "status": "online",
-        "model": DEFAULT_MODEL
+        "model": DEFAULT_MODEL,
+        "llm_loader": health.get("status"),
+        "pool_total": health.get("pool_total"),
+        "pool_idle": health.get("pool_idle"),
     })
 
-@general.route("/api/models", methods=["GET"])
-def get_models():
-    return jsonify({
-        "models": list(MODELS.keys())
-    })
 
 @general.route("/api/python_qa", methods=["POST"])
 def python_qa():
     data = request.json or {}
-
-    messages = data.get("messages")  # ✅ NEW
+    messages = data.get("messages")
     question = data.get("question", "").strip()
 
     if not question and not messages:
         return jsonify({"error": "Question is empty."}), 400
 
-    # ✅ If messages exist → use memory mode
     if messages:
-        # inject system prompt at the top
-        system_prompt = {
+        messages[0] = {
             "role": "system",
             "content": (
                 "You are a senior Python engineer.\n"
@@ -47,13 +46,8 @@ def python_qa():
                 "- Clean code"
             )
         }
-
-        # ensure system prompt is always first
-        messages[0] = system_prompt
-
         return jsonify({"response": chat(messages)})
 
-    # ✅ fallback (no memory, old behavior)
     prompt = f"""
 You are a senior Python engineer.
 Answer clearly and concisely.

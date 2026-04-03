@@ -57,7 +57,7 @@ export async function sendMessage() {
   showThinking();
 
   try {
-    const d     = await query(state.mode, text, state.selectedModel, state.messages);
+    const d     = await query(state.mode, text, state.messages);
     hideThinking();
 
     const reply = fmt(d.response);

@@ -1,17 +1,18 @@
+'''Runner service for Python Assistant.'''
+
 import subprocess
 import os
 from services.project_loader import get_project
 from llm.chat import chat
 
 
-def run_python_file(main_file, model_name="phi3"):
-    project_code, project_path = get_project()
+def run_python_file(main_file: str, session_id: str):
+    project_code, project_path = get_project(session_id)
 
     if not project_path:
         return {"error": "No project loaded with a valid path."}
 
     full_path = os.path.join(project_path, main_file)
-
     if not os.path.exists(full_path):
         return {"error": f"Main file not found: {full_path}"}
 
@@ -20,15 +21,12 @@ def run_python_file(main_file, model_name="phi3"):
             ["python", full_path],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
+            check=False
         )
 
         if not result.stderr:
-            return {
-                "stdout": result.stdout,
-                "stderr": "",
-                "analysis": None
-            }
+            return {"stdout": result.stdout, "stderr": "", "analysis": None}
 
         prompt = f"""
 You are a Python debugging expert.
@@ -48,11 +46,10 @@ Rules:
 - Minimal explanation
 - Clean executable code
 """
-
         return {
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "analysis": chat(prompt, model_name)
+            "stdout":   result.stdout,
+            "stderr":   result.stderr,
+            "analysis": chat(prompt)
         }
 
     except subprocess.TimeoutExpired:

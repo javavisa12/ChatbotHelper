@@ -1,52 +1,63 @@
+'''Runner service for Python Assistant. Executes project code and analyzes errors using LLM.'''
+
+import subprocess
 import os
-
-project_path = None
-project_code = ""
-
-
-def load_project_files(path):
-    global project_path, project_code
-
-    if not path or not os.path.isdir(path):
-        return None, "Folder not found."
-
-    project_path = path
-    project_code = ""
-    loaded_files = []
-
-    for root, dirs, files in os.walk(path):
-        dirs[:] = [d for d in dirs if d not in ["venv", "__pycache__", ".git", "node_modules"]]
-
-        for file in files:
-            if file.endswith(".py"):
-                full_path = os.path.join(root, file)
-                try:
-                    with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                        code = f.read()
-
-                    project_code += f"\n\nFILE: {full_path}\n{code}"
-                    loaded_files.append(full_path)
-
-                except Exception:
-                    pass
-
-    if not loaded_files:
-        return None, "No Python files found."
-
-    return loaded_files, None
+from services.project_loader import get_project
+from llm.chat import chat
 
 
-def load_uploaded_files(files):
-    global project_path, project_code
+def run_python_file(main_file):
+    project_code, project_path = get_project()
 
-    project_path = None
-    project_code = ""
+    if not project_path:
+        return {"error": "No project loaded with a valid path."}
 
-    for f in files:
-        project_code += f"\n\nFILE: {f['name']}\n{f['content']}"
+    full_path = os.path.join(project_path, main_file)
 
-    return [f["name"] for f in files]
+    if not os.path.exists(full_path):
+        return {"error": f"Main file not found: {full_path}"}
 
+    try:
+        result = subprocess.run(
+            ["python", full_path],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False
+        )
 
-def get_project():
-    return project_code, project_path
+        if not result.stderr:
+            return {
+                "stdout": result.stdout,
+                "stderr": "",
+                "analysis": None
+            }
+
+        prompt = f"""
+You are a Python debugging expert.
+
+Error:
+{result.stderr}
+
+Project:
+{project_code}
+
+Output:
+- Root cause (1 short line)
+- Fix (1 short line)
+- Corrected code (production-ready)
+
+Rules:
+- Minimal explanation
+- Clean executable code
+"""
+        return {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "analysis": chat(prompt)
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"error": "Execution timed out"}
+    except Exception as e:
+        return {"error": str(e)}

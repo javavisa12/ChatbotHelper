@@ -1,18 +1,16 @@
-MODELS = {
-    "phi3": {
-        "repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
-        "filename": "Phi-3-mini-4k-instruct-q4.gguf", # 4-bit quantized model,3.8b parameters, 4096 token context
-    },
-    "tinyllama": {
-        "repo_id": "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
-        "filename": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf", # 4-bit quantized model, 1.1b parameters, 2048 token context
-    }
-}
+"""App configuration for Python Assistant."""
 
-DEFAULT_MODEL = "phi3"
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
-CTX = 4096
-THREADS = 6
+# LLM Loader service
+LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://llm-loader:8000")
+LLM_LOADER_SECRET = os.getenv("LLM_LOADER_SECRET", "")
+LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python-assistant")
+
+# Generation settings
 MAX_TOKENS = 1000
 TEMP = 0.2
+DEFAULT_MODEL = "qwen"
