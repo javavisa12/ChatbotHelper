@@ -15,7 +15,7 @@
   position: absolute;
   top: 50%;
   right: 12px;
-  transform: translateY(-50%);
+  transform: translateY(-80%);
   width: 28px;
   height: 28px;
   background: none;
@@ -79,7 +79,7 @@
 .nav {
   padding: 16px 0;
   flex: 1;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 .nav-section {
