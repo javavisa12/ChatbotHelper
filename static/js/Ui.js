@@ -1,47 +1,34 @@
-/* ── ui.js ───────────────────────────────────────────────────────────
- * Pure DOM helpers: status indicators, chat message renderers,
- * thinking animation, sidebar toggle, and misc utilities.
- * No fetch calls; no business logic.
+/* ── Ui.js ───────────────────────────────────────────────────────────
+ * Pure DOM helpers. No fetch calls, no business logic.
  * ─────────────────────────────────────────────────────────────────── */
 
-import { state } from './state.js';
-import { MODES } from './config.js';
+import { state }  from './state.js';
+import { MODES }  from './config.js';
 
-/* ── Connection / status indicators ─────────────────────────────── */
-
+/* ── Connection indicators ───────────────────────────────────────── */
 export function setConn(ok) {
-  const pill = document.getElementById('connPill');
-  const cp   = document.getElementById('pip-conn');
-  const cv   = document.getElementById('val-conn');
-  const txt  = document.getElementById('pill-txt');
-
-  pill.className  = 'conn-pill ' + (ok ? 'ok' : 'err');
-  cp.className    = 'pip '      + (ok ? 'on' : 'err');
-  cv.textContent  = ok ? 'online' : 'offline';
-  txt.textContent = ok ? 'Connected' : 'Disconnected';
+  document.getElementById('connPill').className  = 'conn-pill ' + (ok ? 'ok' : 'err');
+  document.getElementById('pip-conn').className  = 'pip '       + (ok ? 'on' : 'err');
+  document.getElementById('val-conn').textContent  = ok ? 'online'      : 'offline';
+  document.getElementById('pill-txt').textContent  = ok ? 'Connected'   : 'Disconnected';
 }
 
 export function setProj(name) {
-  document.getElementById('pip-proj').className = 'pip on';
-  document.getElementById('val-proj').textContent =
-    name.split(/[/\\]/).pop() || name;
+  document.getElementById('pip-proj').className    = 'pip on';
+  document.getElementById('val-proj').textContent  = name.split(/[/\\]/).pop() || name;
 }
 
 /* ── Mode switcher ───────────────────────────────────────────────── */
-
 export function applyMode(m) {
   const cfg = MODES[m];
-
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + m).classList.add('active');
-
   document.getElementById('crumb-mode').textContent = cfg.title;
   document.getElementById('modeBadge').textContent  = cfg.badge;
   document.getElementById('ctxDesc').textContent    = cfg.desc;
 
   const strip = document.getElementById('attachStrip');
   const chips = document.getElementById('chipsRow');
-
   if (m === 'pyqa') {
     strip.classList.add('hidden-row');
     chips.classList.add('hidden-row');
@@ -51,22 +38,18 @@ export function applyMode(m) {
   }
 }
 
-/* ── Sidebar toggle ──────────────────────────────────────────────── */
-
+/* ── Sidebar ─────────────────────────────────────────────────────── */
 export function toggleSidebar() {
   state.sidebarCollapsed = !state.sidebarCollapsed;
   document.querySelector('.shell').classList.toggle('collapsed', state.sidebarCollapsed);
 }
 
 /* ── Time helper ─────────────────────────────────────────────────── */
-
 function nowTime() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-/* ── Chat message renderers ──────────────────────────────────────── */
-
-/** Append any raw HTML node to #chat. */
+/* ── Chat renderers ──────────────────────────────────────────────── */
 export function append(html) {
   const chat = document.getElementById('chat');
   const div  = document.createElement('div');
@@ -76,11 +59,9 @@ export function append(html) {
 }
 
 export function removeEmpty() {
-  const e = document.getElementById('emptyState');
-  if (e) e.remove();
+  document.getElementById('emptyState')?.remove();
 }
 
-/** User bubble with optional attached-file chips. */
 export function renderUserMsg(text, files = []) {
   removeEmpty();
   const chips = files.map(f => `<div class="fchip">${f.name}</div>`).join('');
@@ -97,11 +78,9 @@ export function renderUserMsg(text, files = []) {
     </div>`);
 }
 
-/** Assistant bubble. */
 export function renderAssistantMsg(html) {
   const elapsed = state.requestStartTime
-    ? Math.round((Date.now() - state.requestStartTime) / 1000)
-    : 0;
+    ? Math.round((Date.now() - state.requestStartTime) / 1000) : 0;
   append(`
     <div class="msg">
       <div class="msg-left">
@@ -112,7 +91,6 @@ export function renderAssistantMsg(html) {
     </div>`);
 }
 
-/** System / status message. */
 export function renderSysMsg(text, type) {
   append(`
     <div class="msg">
@@ -125,7 +103,6 @@ export function renderSysMsg(text, type) {
 }
 
 /* ── Thinking animation ──────────────────────────────────────────── */
-
 export function showThinking() {
   const chat = document.getElementById('chat');
   const el   = document.createElement('div');
@@ -141,19 +118,16 @@ export function showThinking() {
 }
 
 export function hideThinking() {
-  const e = document.getElementById('thinkEl');
-  if (e) e.remove();
+  document.getElementById('thinkEl')?.remove();
 }
 
-/* ── Send-button busy state ──────────────────────────────────────── */
-
+/* ── Send button ─────────────────────────────────────────────────── */
 export function setSendBusy(busy) {
   const btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = busy;
 }
 
-/* ── File chips ──────────────────────────────────────────────────── */
-
+/* ── Chips ───────────────────────────────────────────────────────── */
 export function renderChips(attached, onRemove) {
   document.getElementById('chipsRow').innerHTML = attached
     .map((f, i) => `
@@ -165,14 +139,12 @@ export function renderChips(attached, onRemove) {
 }
 
 /* ── Textarea auto-resize ────────────────────────────────────────── */
-
 export function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = el.scrollHeight + 'px';
 }
 
 /* ── Utility ─────────────────────────────────────────────────────── */
-
 export function esc(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -187,29 +159,36 @@ export function fillPrompt(text) {
   inp.focus();
 }
 
-export function clearChat() {
-  const chat = document.getElementById('chat');
-  chat.innerHTML = `
-    <div class="empty" id="emptyState">
-      <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
-      <div class="empty-sub">Attach files to begin.</div>
-      <div class="empty-grid">
-        <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
-          <div class="card-tag">Project</div>
-          <div class="card-text">Summarize this project</div>
-        </div>
-        <div class="empty-card" onclick="fillPrompt('Find all potential bugs and edge cases in this code.')">
-          <div class="card-tag">Debug</div>
-          <div class="card-text">Find potential bugs</div>
-        </div>
-        <div class="empty-card" onclick="fillPrompt('Review the code quality and suggest specific improvements.')">
-          <div class="card-tag">Review</div>
-          <div class="card-text">Full code review</div>
-        </div>
-        <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
-          <div class="card-tag">Python Q&amp;A</div>
-          <div class="card-text">No files needed</div>
-        </div>
+const EMPTY_HTML = `
+  <div class="empty" id="emptyState">
+    <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
+    <div class="empty-sub">Attach files to begin.</div>
+    <div class="empty-grid">
+      <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
+        <div class="card-tag">Project</div>
+        <div class="card-text">Summarize this project</div>
       </div>
-    </div>`;
+      <div class="empty-card" onclick="fillPrompt('Find all potential bugs and edge cases in this code.')">
+        <div class="card-tag">Debug</div>
+        <div class="card-text">Find potential bugs</div>
+      </div>
+      <div class="empty-card" onclick="fillPrompt('Review the code quality and suggest specific improvements.')">
+        <div class="card-tag">Review</div>
+        <div class="card-text">Full code review</div>
+      </div>
+      <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
+        <div class="card-tag">Python Q&amp;A</div>
+        <div class="card-text">No files needed</div>
+      </div>
+    </div>
+  </div>`;
+
+/**
+ * Clears the chat UI and resets the session history.
+ * Imported by main.js and wired to the Clear button.
+ */
+export function clearChat() {
+  document.getElementById('chat').innerHTML = EMPTY_HTML;
+  // Lazy import avoids circular dep (chat.js imports Ui.js)
+  import('./chat.js').then(({ resetSession }) => resetSession());
 }

@@ -186,12 +186,12 @@
   </main>
 </div>
 
-<!-- Hidden file inputs -->
+<!-- Hidden file inputs , below the webpage-->
 <input type="file" id="fileInput" multiple
   accept=".py,.txt,.json,.md,.yaml,.yml,.toml,.cfg,.ini,.js,.ts,.html,.css,.csv"
   onchange="handleFiles(event)"/>
 <input type="file" id="folderInput" multiple webkitdirectory
-  onchange="handleFiles(event)"/>
+  onchange="handleFiles(event)"/> 
 
 <!-- ES Module entry point -->
 <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>

@@ -4,14 +4,17 @@
  *   – syncing to the backend via api.loadFiles
  *   – keeping state.attached in sync
  *   – re-rendering the chips row in the UI
+
+ * File/folder attachment + backend sync.
+ * Resets chat session whenever a new project is loaded.
  * ─────────────────────────────────────────────────────────────────── */
 
-import { state }       from './state.js';
-import { loadProject, loadFiles } from './api.js';
-import { setProj, renderSysMsg } from './Ui.js';
+import { state }                    from './state.js';
+import { loadProject, loadFiles }   from './api.js';
+import { setProj, renderSysMsg }    from './Ui.js';
+import { resetSession }             from './chat.js';
 
-/* ── Chips (attached file labels) ───────────────────────────────── */
-
+/* ── Chips ───────────────────────────────────────────────────────── */
 export function renderChips() {
   document.getElementById('chipsRow').innerHTML = state.attached
     .map((f, i) => `
@@ -22,20 +25,14 @@ export function renderChips() {
     .join('');
 }
 
-/* ── Sync state.attached → backend ──────────────────────────────── */
-
+/* ── Sync to backend ─────────────────────────────────────────────── */
 async function syncFiles() {
   if (!state.backendUp || !state.attached.length) return;
   await loadFiles(state.attached, state.selectedModel);
   setProj(state.attached.length + ' file(s)');
 }
 
-/* ── Public: called from onclick in HTML ─────────────────────────── */
-
-/**
- * Handle files chosen via <input type="file">.
- * @param {Event} e  The change event from the file input.
- */
+/* ── Handle file input ───────────────────────────────────────────── */
 export function handleFiles(e) {
   const toRead = Array.from(e.target.files).filter(
     f => !state.attached.find(a => a.name === f.name)
@@ -44,25 +41,25 @@ export function handleFiles(e) {
 
   let done = 0;
   toRead.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = async () => {
+    const reader    = new FileReader();
+    reader.onload   = async () => {
       state.attached.push({ name: file.name, content: reader.result });
       done++;
       if (done === toRead.length) {
         renderChips();
+        // Reset session — new files = new context
+        resetSession();
         await syncFiles();
+        renderSysMsg(`${toRead.length} file(s) attached — session reset.`, 'ok');
       }
     };
     reader.readAsText(file);
   });
 
-  // Reset input so the same file can be re-attached after removal
   e.target.value = '';
 }
 
-/**
- * Prompt for a folder path and load it via the backend API.
- */
+/* ── Attach folder ───────────────────────────────────────────────── */
 export async function attachFolder() {
   const path = prompt('Enter full local path to project folder:');
   if (!path) return;
@@ -70,22 +67,19 @@ export async function attachFolder() {
   try {
     const d = await loadProject(path, state.selectedModel);
     setProj(path);
-    renderSysMsg(`Project loaded: ${d.files.length} files found.`, 'ok');
+    // Reset session — new project = fresh context
+    resetSession();
+    renderSysMsg(`Project loaded: ${d.files.length} files — session reset.`, 'ok');
   } catch (err) {
     renderSysMsg('Folder load failed: ' + err.message, 'err');
   }
 }
 
-/**
- * Remove a file by index and re-sync.
- * Exposed on window so inline onclick strings can reach it.
- * @param {number} index
- */
+/* ── Remove file ─────────────────────────────────────────────────── */
 export async function removeFile(index) {
   state.attached.splice(index, 1);
   renderChips();
   await syncFiles();
 }
 
-// Expose removeFile globally so the chips' onclick="window._removeFile(i)" works.
 window._removeFile = removeFile;
