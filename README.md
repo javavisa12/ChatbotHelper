@@ -13,9 +13,10 @@
 /pythonITD/PythonAssistance/static/css/sidebar.css
 /pythonITD/PythonAssistance/static/css/base/base.css
 /pythonITD/PythonAssistance/static/css/base/theme-switch.css
-/pythonITD/PythonAssistance/static/css/thinking/chat.css
-/pythonITD/PythonAssistance/static/css/message/message.css
-/pythonITD/PythonAssistance/static/css/emptycard/empty-card.css
-/pythonITD/PythonAssistance/static/css/code/code-block.css
-/pythonITD/PythonAssistance/static/css/code/code-copy.css
-/pythonITD/PythonAssistance/static/css/code/code-download.css
+/pythonITD/PythonAssistance/static/css/empty-card/empty-card.css
+/pythonITD/PythonAssistance/static/css/chat/chat.css
+/pythonITD/PythonAssistance/static/css/chat/code/code-block.css
+/pythonITD/PythonAssistance/static/css/chat/code/code-copy.css
+/pythonITD/PythonAssistance/static/css/chat/code/code-download.css
+/pythonITD/PythonAssistance/static/css/chat/message/message.css
+/pythonITD/PythonAssistance/static/css/chat/thinking/thinking.css
