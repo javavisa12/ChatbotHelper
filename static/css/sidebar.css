@@ -1,16 +1,30 @@
 /* ── sidebar.css ─────────────────────────────────────────────────────
  * Sidebar header, navigation buttons, dividers, and status box.
+ * Red sidebar: all sidebar elements use --sidebar-* variables.
  * ─────────────────────────────────────────────────────────────────── */
+
+/* Override sidebar-scoped colors */
+.sidebar {
+  --text:     var(--sidebar-text);
+  --text-dim: var(--sidebar-muted);
+  --muted:    var(--sidebar-muted);
+  --line:     var(--sidebar-line);
+  --line2:    var(--sidebar-line);
+  --ghost:    var(--sidebar-ghost);
+  --white:    var(--sidebar-text);
+  --panel:    rgba(0,0,0,0.12);
+  --red-dim:  var(--sidebar-active);
+}
 
 /* ── Header ──────────────────────────────────────────────────────── */
 .sidebar-head {
   padding: 18px 20px 20px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(255,255,255,0.18);
   position: relative;
   padding-right: 44px;
 }
 
-/* ── Toggle button — classic 3-line hamburger ────────────────────── */
+/* ── Toggle button ───────────────────────────────────────────────── */
 .sidebar-toggle {
   position: absolute;
   top: 50%;
@@ -19,7 +33,7 @@
   width: 28px;
   height: 28px;
   background: none;
-  border: 1px solid var(--line2);
+  border: 1px solid rgba(255,255,255,0.35);
   border-radius: 2px;
   cursor: pointer;
   display: flex;
@@ -32,8 +46,8 @@
   z-index: 20;
 }
 .sidebar-toggle:hover {
-  border-color: var(--red);
-  background: var(--red-dim);
+  border-color: #ffffff;
+  background: rgba(255,255,255,0.15);
 }
 
 /* The three lines */
@@ -41,12 +55,12 @@
   display: block;
   width: 13px;
   height: 1.5px;
-  background: var(--muted);
+  background: rgba(255,255,255,0.8);
   border-radius: 1px;
   transition: background 0.15s, transform 0.2s, opacity 0.2s;
 }
 .sidebar-toggle:hover span {
-  background: var(--red);
+  background: #ffffff;
 }
 
 
@@ -55,13 +69,13 @@
   font-size: 32px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--white);
+  color: #ffffff;
   display: block;
   line-height: 1;
 }
 .wordmark em {
   font-style: italic;
-  color: var(--red);
+  color: rgba(255,255,255,0.75);
   font-weight: 600;
 }
 
@@ -72,7 +86,7 @@
   font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--red);
+  color: rgba(255,255,255,0.7);
 }
 
 /* ── Navigation ──────────────────────────────────────────────────── */
@@ -91,7 +105,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--red);
+  color: rgba(255,255,255,0.55);
   padding: 12px 0 6px;
   display: block;
 }
@@ -104,7 +118,7 @@
   padding: 8px 10px;
   border: none;
   background: none;
-  color: var(--text-dim);
+  color: rgba(255,255,255,0.75);
   font-family: var(--cond);
   font-size: 12px;
   font-weight: 500;
@@ -124,24 +138,24 @@
   left: 0; top: 50%;
   transform: translateY(-50%) scaleY(0);
   width: 2px; height: 60%;
-  background: var(--red);
+  background: #ffffff;
   border-radius: 0 1px 1px 0;
   transition: transform 0.12s;
 }
 
-.nav-btn:hover                 { color: var(--text); background: var(--ghost); }
-.nav-btn.active                { color: var(--white); background: var(--red-dim); }
+.nav-btn:hover                 { color: #ffffff; background: rgba(255,255,255,0.12); }
+.nav-btn.active                { color: #ffffff; background: rgba(0,0,0,0.15); }
 .nav-btn.active::before        { transform: translateY(-50%) scaleY(1); }
-.nav-btn.active .nav-icon      { color: var(--red); opacity: 1; }
+.nav-btn.active .nav-icon      { color: #ffffff; opacity: 1; }
 
 .nav-icon { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.7; }
 
-.sidebar-divider { height: 1px; background: var(--line); margin: 4px 0; }
+.sidebar-divider { height: 1px; background: rgba(255,255,255,0.18); margin: 4px 0; }
 
 /* ── Status box ──────────────────────────────────────────────────── */
 .status-box {
   padding: 14px 20px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid rgba(255,255,255,0.18);
 }
 
 .status-item {
@@ -150,18 +164,18 @@
   gap: 8px;
   margin-bottom: 7px;
   font-size: 10px;
-  color: var(--muted);
+  color: rgba(255,255,255,0.6);
   letter-spacing: 0.04em;
 }
 .status-item:last-child { margin-bottom: 0; }
 
-.pip            { width: 5px; height: 5px; border-radius: 50%; background: var(--line2); flex-shrink: 0; }
-.pip.on         { background: #27ae60; box-shadow: 0 0 4px #27ae60; }
-.pip.err        { background: var(--red); }
-.pip.dim        { background: var(--muted); }
+.pip            { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.3); flex-shrink: 0; }
+.pip.on         { background: #5dde8a; box-shadow: 0 0 4px #5dde8a; }
+.pip.err        { background: #ffaaaa; }
+.pip.dim        { background: rgba(255,255,255,0.3); }
 
 .status-val {
-  color: var(--text);
+  color: #ffffff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
