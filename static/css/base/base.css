@@ -4,8 +4,42 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Dark mode (default) ─────────────────────────────────────────── */
+/* ── Base theme: White chat + Red sidebar ────────────────────────── */
 :root {
+  /* Chat / main area — white */
+  --off:      #f5f5f5;
+  --black:    #ffffff;
+  --panel:    #f9f9f9;
+  --line:     #e8e8e8;
+  --line2:    #d8d8d8;
+  --muted:    #999999;
+  --ghost:    #f2f2f2;
+  --text:     #111111;
+  --text-dim: #555555;
+  --white:    #111111;       /* "white" var used for text-on-bg, now dark */
+
+  /* Sidebar — red */
+  --sidebar-bg:       #c0392b;
+  --sidebar-border:   rgba(0,0,0,0.15);
+  --sidebar-text:     #ffffff;
+  --sidebar-muted:    rgba(255,255,255,0.65);
+  --sidebar-ghost:    rgba(255,255,255,0.10);
+  --sidebar-line:     rgba(255,255,255,0.18);
+  --sidebar-active:   rgba(255,255,255,0.20);
+  --sidebar-accent:   #ffffff;
+
+  /* Accent */
+  --red:      #c0392b;
+  --red-dim:  rgba(192,57,43,0.08);
+  --red-mid:  rgba(192,57,43,0.18);
+
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --cond:  'Barlow Condensed', sans-serif;
+  --mono:  'JetBrains Mono', monospace;
+}
+
+/* ── Dark mode toggle (optional) ────────────────────────────────── */
+body.dark {
   --off:      #25303c;
   --black:    #202020;
   --panel:    #0d0d0d;
@@ -15,31 +49,19 @@
   --ghost:    #2a2a2a;
   --text:     #ffffff;
   --text-dim: #8b8780;
-  --red:      #c0392b;
-  --red-dim:  rgba(192,57,43,0.08);
-  --red-mid:  rgba(192,57,43,0.18);
   --white:    #ffffff;
 
-  --serif: 'Cormorant Garamond', Georgia, serif;
-  --cond:  'Barlow Condensed', sans-serif;
-  --mono:  'JetBrains Mono', monospace;
-}
+  --sidebar-bg:       #c0392b;
+  --sidebar-border:   rgba(0,0,0,0.3);
+  --sidebar-text:     #ffffff;
+  --sidebar-muted:    rgba(255,255,255,0.6);
+  --sidebar-ghost:    rgba(255,255,255,0.08);
+  --sidebar-line:     rgba(255,255,255,0.15);
+  --sidebar-active:   rgba(255,255,255,0.18);
+  --sidebar-accent:   #ffffff;
 
-/* ── Light mode overrides ────────────────────────────────────────── */
-body.light {
-  --off:      #f0f0f0;
-  --black:    #d2d0d0;
-  --panel:    #f7f7f7;
-  --line:     #e0e0e0;
-  --line2:    #d0d0d0;
-  --muted:    #888888;
-  --ghost:    #eeeeee;
-  --text:     #111111;
-  --text-dim: #555555;
-  --red:      #c0392b;
-  --red-dim:  rgba(192,57,43,0.08);
-  --red-mid:  rgba(192,57,43,0.18);
-  --white:    #111111;
+  --red-dim:  rgba(192,57,43,0.15);
+  --red-mid:  rgba(192,57,43,0.28);
 }
 
 html, body {
@@ -54,4 +76,3 @@ html, body {
   letter-spacing: 0.01em;
   transition: background 0.2s, color 0.2s;
 }
-
