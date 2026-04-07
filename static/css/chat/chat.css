@@ -9,9 +9,9 @@
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--text-dim);
 }
-.mode-crumb b { color: var(--white); font-weight: 600; }
+.mode-crumb b { color: var(--red); font-weight: 700; }
 
 .conn-pill {
   display: flex;
@@ -123,4 +123,3 @@ pre.cb::-webkit-scrollbar-thumb { background: var(--line2); }
   color: #c0504d; white-space: pre-wrap;
   border-radius: 0 1px 1px 0;
 }
-
