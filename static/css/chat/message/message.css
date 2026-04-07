@@ -1,6 +1,6 @@
 /* ── Messages ────────────────────────────────────────────────────── */
 .msg {
-  border-bottom: 1px solid var(--muted);
+  border-bottom: 1px solid var(--line);
   padding: 10px 16px;
   display: grid;
   grid-template-columns: 90px 1fr;
