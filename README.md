@@ -1,40 +1,57 @@
- * Debugger PIN: 976-290-473
-127.0.0.1 - - [08/Apr/2026 14:25:03] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/base/base.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/layout.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/sidebar.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/input.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/chat/chat.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:07] "GET /static/css/empty-card/empty-card.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/css/chat/code/code-block.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/css/chat/code/code-copy.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/css/chat/code/code-download.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/css/chat/message/message.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/css/chat/thinking/thinking.css HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/main.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/health.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/state.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/files.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/Ui.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/chat.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:08] "GET /static/js/formatter.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:09] "GET /static/js/config.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:09] "GET /static/js/api.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:09] "GET /static/js/chatHistory.js HTTP/1.1" 304 -
-127.0.0.1 - - [08/Apr/2026 14:25:09] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:09] "GET /favicon.ico HTTP/1.1" 404 -
-127.0.0.1 - - [08/Apr/2026 14:25:14] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:19] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:24] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:29] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:34] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:39] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:44] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:48] "POST /pyqa HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:49] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:54] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:25:59] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:26:04] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:26:09] "GET /status HTTP/1.1" 200 -
-127.0.0.1 - - [08/Apr/2026 14:26:14] "GET /status HTTP/1.1" 200 -
+'''AI-related routes for Python Assistant.'''
+
+from flask import Blueprint, request, jsonify, session
+from llm.chat import chat
+from services.project_loader import get_project
+
+ai = Blueprint("ai", __name__)
+
+
+@ai.route("/api/ask", methods=["POST"])
+def ask():
+    '''Ask a question about attached files/project.'''
+
+    try:
+        # ✅ Session check
+        session_id = session.get("session_id")
+        if not session_id:
+            return jsonify({"error": "No session found."}), 400
+
+        # ✅ Get project files
+        code, _ = get_project(session_id)
+        if not code:
+            return jsonify({"error": "No files attached."}), 400
+
+        # ✅ Get request data safely
+        data = request.get_json() or {}
+        question = data.get("question", "").strip()
+
+        if not question:
+            return jsonify({"error": "No question provided."}), 400
+
+        # ✅ Prompt
+        prompt = f"""
+You are a senior Python engineer.
+Answer based on the attached files.
+
+Rules:
+- 1-2 sentence explanation
+- Clean code
+- Code in code block
+
+Project:
+{code}
+
+Question:
+{question}
+"""
+
+        # ✅ LLM call
+        result = chat(prompt)
+
+        # ✅ Frontend expects 'answer'
+        return jsonify({"answer": result})
+
+    except Exception as e:
+        print("ERROR in /ask:", e)
+        return jsonify({"error": str(e)}), 500
