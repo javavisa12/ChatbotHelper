@@ -12,6 +12,7 @@ def load_project():
     path       = request.json.get("path", "").strip().replace('"', '')
     session_id = session.get("session_id") or str(uuid.uuid4())
     session["session_id"] = session_id
+    print(f"DEBUG: Files loaded for session:{session_id}")
 
     files, err = load_project_files(path, session_id)
     if err:
