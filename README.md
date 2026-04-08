@@ -1,8 +1,36 @@
-Traceback (most recent call last):
-  File "/pythonITD/PythonAssistance/app.py", line 8, in <module>
-    from routes.project import project
-  File "/pythonITD/PythonAssistance/routes/project.py", line 5, in <module>
-    from services.project_loader import load_project_files, load_uploaded_files
-  File "/pythonITD/PythonAssistance/services/project_loader.py", line 5, in <module>
-    from services.project_loader import get_project
-ImportError: cannot import name 'get_project' from partially initialized module 'services.project_loader' (most likely due to a circular import) (/pythonITD/PythonAssistance/services/project_loader.py)
+'''Project-related routes for Python Assistant.'''
+
+import uuid
+from flask import Blueprint, request, jsonify, session
+from services.project_loader import load_project_files, load_uploaded_files
+
+project = Blueprint("project", __name__)
+
+
+@project.route("/api/load_project", methods=["POST"])
+def load_project():
+    path       = request.json.get("path", "").strip().replace('"', '')
+    session_id = session.get("session_id") or str(uuid.uuid4())
+    session["session_id"] = session_id
+    print(f"DEBUG: Files loaded for session:{session_id}")
+
+    files, err = load_project_files(path, session_id)
+    if err:
+        return jsonify({"error": err}), 400
+
+    return jsonify({"message": f"Loaded {len(files)} files", "files": files})
+
+
+@project.route("/api/load_files", methods=["POST"])
+def load_files():
+    data       = request.json or {}
+    files      = data.get("files", [])
+    session_id = session.get("session_id") or str(uuid.uuid4())
+    session["session_id"] = session_id
+
+    if not files:
+        return jsonify({"error": "No files provided."}), 400
+
+    names = load_uploaded_files(files, session_id)
+    return jsonify({"message": f"Loaded {len(names)} files", "files": names})
+
