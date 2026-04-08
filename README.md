@@ -1,57 +1,76 @@
-'''AI-related routes for Python Assistant.'''
+from flask import Blueprint, jsonify, request, render_template, session
+import uuid
 
-from flask import Blueprint, request, jsonify, session
+from config import DEFAULT_MODEL
 from llm.chat import chat
-from services.project_loader import get_project
+from llm.model import health_check
 
-ai = Blueprint("ai", __name__)
+general = Blueprint("general", __name__)
 
 
-@ai.route("/api/ask", methods=["POST"])
-def ask():
-    '''Ask a question about attached files/project.'''
+@general.route("/")
+def index():
+    return render_template("index.html")
+
+
+# ✅ FIXED: removed /api + added session init
+@general.route("/api/status", methods=["GET"])
+def status():
+    if "session_id" not in session:
+        session["session_id"] = str(uuid.uuid4())
+
+
+    health = health_check()
+
+    return jsonify({
+        "status": "online",
+        "model": DEFAULT_MODEL,
+        "llm_loader": health.get("status"),
+        "pool_total": health.get("pool_total"),
+        "pool_idle": health.get("pool_idle"),
+        "session_id": session["session_id"]
+    })
+
+
+# ✅ FIXED: renamed route + fixed response key
+@general.route("/api/pyqa", methods=["POST"])
+def pyqa():
+    data = request.get_json() or {}
+    messages = data.get("messages")
+    question = data.get("question", "").strip()
+
+    if not question and not messages:
+        return jsonify({"error": "Question is empty."}), 400
 
     try:
-        # ✅ Session check
-        session_id = session.get("session_id")
-        if not session_id:
-            return jsonify({"error": "No session found."}), 400
+        if messages:
+            messages[0] = {
+                "role": "system",
+                "content": (
+                    "You are a senior Python engineer.\n"
+                    "Answer clearly and concisely.\n"
+                    "Rules:\n"
+                    "- Short explanation (1-2 sentences)\n"
+                    "- Provide working code\n"
+                    "- Clean code"
+                )
+            }
+            return jsonify({"answer": chat(messages)})  # ✅ FIXED
 
-        # ✅ Get project files
-        code, _ = get_project(session_id)
-        if not code:
-            return jsonify({"error": "No files attached."}), 400
-
-        # ✅ Get request data safely
-        data = request.get_json() or {}
-        question = data.get("question", "").strip()
-
-        if not question:
-            return jsonify({"error": "No question provided."}), 400
-
-        # ✅ Prompt
         prompt = f"""
 You are a senior Python engineer.
-Answer based on the attached files.
+Answer clearly and concisely.
 
 Rules:
-- 1-2 sentence explanation
+- Short explanation (1-2 sentences)
+- Provide working code
 - Clean code
-- Code in code block
-
-Project:
-{code}
 
 Question:
 {question}
 """
-
-        # ✅ LLM call
-        result = chat(prompt)
-
-        # ✅ Frontend expects 'answer'
-        return jsonify({"answer": result})
+        return jsonify({"answer": chat(prompt)})  # ✅ FIXED
 
     except Exception as e:
-        print("ERROR in /ask:", e)
+        print("ERROR:", e)
         return jsonify({"error": str(e)}), 500
