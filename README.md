@@ -1,36 +1,58 @@
-'''Project-related routes for Python Assistant.'''
+'''Runner service for Python Assistant. Executes project code and analyzes errors using LLM.'''
 
-import uuid
-from flask import Blueprint, request, jsonify, session
-from services.project_loader import load_project_files, load_uploaded_files
-
-project = Blueprint("project", __name__)
-
-
-@project.route("/api/load_project", methods=["POST"])
-def load_project():
-    path       = request.json.get("path", "").strip().replace('"', '')
-    session_id = session.get("session_id") or str(uuid.uuid4())
-    session["session_id"] = session_id
-    print(f"DEBUG: Files loaded for session:{session_id}")
-
-    files, err = load_project_files(path, session_id)
-    if err:
-        return jsonify({"error": err}), 400
-
-    return jsonify({"message": f"Loaded {len(files)} files", "files": files})
+import subprocess
+import os
+from project import get_project
+from llm.chat import chat
 
 
-@project.route("/api/load_files", methods=["POST"])
-def load_files():
-    data       = request.json or {}
-    files      = data.get("files", [])
-    session_id = session.get("session_id") or str(uuid.uuid4())
-    session["session_id"] = session_id
+def run_python_file(main_file: str, session_id: str):
+    project_code, project_path = get_project(session_id)
 
-    if not files:
-        return jsonify({"error": "No files provided."}), 400
+    if not project_path:
+        return {"error": "No project loaded with a valid path."}
 
-    names = load_uploaded_files(files, session_id)
-    return jsonify({"message": f"Loaded {len(names)} files", "files": names})
+    full_path = os.path.join(project_path, main_file)
+    if not os.path.exists(full_path):
+        return {"error": f"Main file not found: {full_path}"}
 
+    try:
+        result = subprocess.run(
+            ["python", full_path],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False
+        )
+
+        if not result.stderr:
+            return {"stdout": result.stdout, "stderr": "", "analysis": None}
+
+        prompt = f"""
+You are a Python debugging expert.
+
+Error:
+{result.stderr}
+
+Project:
+{project_code}
+
+Output:
+- Root cause (1 short line)
+- Fix (1 short line)
+- Corrected code (production-ready)
+
+Rules:
+- Minimal explanation
+- Clean executable code
+"""
+        return {
+            "stdout":   result.stdout,
+            "stderr":   result.stderr,
+            "analysis": chat(prompt)
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"error": "Execution timed out"}
+    except Exception as e:
+        return {"error": str(e)}
