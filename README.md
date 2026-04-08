@@ -1,47 +1,27 @@
-/* ── api.js ─────────────────────────────────────────────────────────
- * All network calls to the Python backend.
- * ─────────────────────────────────────────────────────────────────── */
+'''Python Assistant - AI-powered Python code analysis tool.'''
 
-import { API } from './config.js';
+import os
+from flask import Flask
+from flask_cors import CORS
 
-export async function fetchStatus() {
-  const r = await fetch(`${API}/status`, { signal: AbortSignal.timeout(2500) });
-  return r.json();
-}
+from routes.general import general
+from routes.project import project
+from routes.ai import ai
 
-export async function loadProject(path) {
-  const r = await fetch(`${API}/load_project`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ path }),
-  });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Load project failed');
-  return d;
-}
+app = Flask(__name__)
 
-export async function loadFiles(files) {
-  await fetch(`${API}/load_files`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ files }),
-  });
-}
+# 1. FIXED: Sessions require a secret key to function
+app.secret_key = "pyassist-internal-dev-key" 
 
-export async function query(mode, text, messages) {
-  const endpoint = mode === 'pyqa' ? 'python_qa' : mode;
+# 2. FIXED: Added explicit origins to ensure CORS doesn't block local dev ports
+CORS(app, supports_credentials=True, origins=["http://localhost:5500", "http://127.0.0.1:5500"])
 
-  const body = { messages };
-  if (mode === 'pyqa' || mode === 'ask') body.question = text;
-  if (mode === 'refactor')               body.focus    = text;
+# 3. FIXED: Using url_prefix keeps your URLs consistent with config.js
+app.register_blueprint(general, url_prefix='/api')
+app.register_blueprint(project, url_prefix='/api')
+app.register_blueprint(ai, url_prefix='/api')
 
-  const r = await fetch(`${API}/${endpoint}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-  });
-
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || 'Server error');
-  return d;
-}
+if __name__ == "__main__":
+    # 4. FIXED: Port changed to 8504 to match your config.js
+    print("Server running at http://localhost:8504")
+    app.run(host="0.0.0.0", port=8504, debug=True)
