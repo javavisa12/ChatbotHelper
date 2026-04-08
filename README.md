@@ -1,76 +1,35 @@
-from flask import Blueprint, jsonify, request, render_template, session
+'''Project-related routes for Python Assistant.'''
+
 import uuid
+from flask import Blueprint, request, jsonify, session
+from services.project_loader import load_project_files, load_uploaded_files
 
-from config import DEFAULT_MODEL
-from llm.chat import chat
-from llm.model import health_check
-
-general = Blueprint("general", __name__)
+project = Blueprint("project", __name__)
 
 
-@general.route("/")
-def index():
-    return render_template("index.html")
+@project.route("/api/load_project", methods=["POST"])
+def load_project():
+    path       = request.json.get("path", "").strip().replace('"', '')
+    session_id = session.get("session_id") or str(uuid.uuid4())
+    session["session_id"] = session_id
+    print(f"DEBUG: Files loaded for session:{session_id}")
+
+    files, err = load_project_files(path, session_id)
+    if err:
+        return jsonify({"error": err}), 400
+
+    return jsonify({"message": f"Loaded {len(files)} files", "files": files})
 
 
-# ✅ FIXED: removed /api + added session init
-@general.route("/api/status", methods=["GET"])
-def status():
-    if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
+@project.route("/api/load_files", methods=["POST"])
+def load_files():
+    data       = request.json or {}
+    files      = data.get("files", [])
+    session_id = session.get("session_id") or str(uuid.uuid4())
+    session["session_id"] = session_id
 
+    if not files:
+        return jsonify({"error": "No files provided."}), 400
 
-    health = health_check()
-
-    return jsonify({
-        "status": "online",
-        "model": DEFAULT_MODEL,
-        "llm_loader": health.get("status"),
-        "pool_total": health.get("pool_total"),
-        "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"]
-    })
-
-
-# ✅ FIXED: renamed route + fixed response key
-@general.route("/api/pyqa", methods=["POST"])
-def pyqa():
-    data = request.get_json() or {}
-    messages = data.get("messages")
-    question = data.get("question", "").strip()
-
-    if not question and not messages:
-        return jsonify({"error": "Question is empty."}), 400
-
-    try:
-        if messages:
-            messages[0] = {
-                "role": "system",
-                "content": (
-                    "You are a senior Python engineer.\n"
-                    "Answer clearly and concisely.\n"
-                    "Rules:\n"
-                    "- Short explanation (1-2 sentences)\n"
-                    "- Provide working code\n"
-                    "- Clean code"
-                )
-            }
-            return jsonify({"answer": chat(messages)})  # ✅ FIXED
-
-        prompt = f"""
-You are a senior Python engineer.
-Answer clearly and concisely.
-
-Rules:
-- Short explanation (1-2 sentences)
-- Provide working code
-- Clean code
-
-Question:
-{question}
-"""
-        return jsonify({"answer": chat(prompt)})  # ✅ FIXED
-
-    except Exception as e:
-        print("ERROR:", e)
-        return jsonify({"error": str(e)}), 500
+    names = load_uploaded_files(files, session_id)
+    return jsonify({"message": f"Loaded {len(names)} files", "files": names})
