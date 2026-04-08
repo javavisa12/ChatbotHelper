@@ -1,23 +1,54 @@
-from flask import Flask
-from flask_cors import CORS
-import os
-from routes.general import general
-from routes.project import project
-from routes.ai import ai
+/* Updated api.js */
+import { API } from './config.js';
 
-app = Flask(__name__)
+export async function fetchStatus() {
+  const r = await fetch(`${API}/status`, { 
+    signal: AbortSignal.timeout(2500),
+    credentials: 'include' // Needed for CORS sessions
+  });
+  return r.json();
+}
 
-# IMPORTANT: You MUST have a secret key for session["session_id"] to work!
-app.secret_key = "pyassist_super_secret_key" 
+export async function loadProject(path) {
+  const r = await fetch(`${API}/load_project`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body:    JSON.stringify({ path }),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Load project failed');
+  return d;
+}
 
-# Enable CORS for your local frontend port (usually 5500 for Live Server)
-CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5500"])
+export async function loadFiles(files) {
+  // Fixed: added result handling and credentials
+  const r = await fetch(`${API}/load_files`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body:    JSON.stringify({ files }),
+  });
+  return r.json();
+}
 
-# Registering with url_prefix='/api' makes everything match config.js
-app.register_blueprint(general, url_prefix='/api')
-app.register_blueprint(project, url_prefix='/api')
-app.register_blueprint(ai, url_prefix='/api')
+export async function query(mode, text, messages) {
+  // Matches your backend route names in ai.py and general.py
+  const endpoint = mode === 'pyqa' ? 'pyqa' : 'ask'; 
 
-if __name__ == "__main__":
-    # Ensure port matches config.js (8504)
-    app.run(host="0.0.0.0", port=8504, debug=True)
+  const body = { 
+    question: text, // Matches request.json.get("question") in Python
+    messages: messages 
+  };
+
+  const r = await fetch(`${API}/${endpoint}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // Allows Flask to see your session_id
+    body:    JSON.stringify(body),
+  });
+
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'Server error');
+  return d;
+}
