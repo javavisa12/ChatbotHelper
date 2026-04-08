@@ -5,7 +5,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from routes.general import general
-from routes.project import project
+from routes.project import load_project
 from routes.ai import ai
 
 app = Flask(__name__)
@@ -19,3 +19,6 @@ app.register_blueprint(ai)
 if __name__ == "__main__":
     print("Server running at http://localhost:8504")
     app.run(host="0.0.0.0", port=8504, debug=True)
+
+
+    
