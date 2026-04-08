@@ -17,5 +17,5 @@ app.register_blueprint(project)
 app.register_blueprint(ai)
 
 if __name__ == "__main__":
-    print("Server running at http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    print("Server running at http://localhost:8504")
+    app.run(host="0.0.0.0", port=8504, debug=True)
