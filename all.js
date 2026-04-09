@@ -33,6 +33,11 @@ const state = {
     sidebarCollapsed:  false,
 };
 
+const ENDPOINTS = {
+    pyqa:   '/pyqa',
+    review: '/ask',  // Code review uses the ask endpoint with attached files
+};
+
 // ======================== UTILITIES ========================
 function esc(s) {
     return String(s)
@@ -332,8 +337,11 @@ async function sendMessage() {
     setBusyState(true);
 
     try {
+        // Choose endpoint based on mode
+        const endpoint = state.mode === 'pyqa' ? '/pyqa' : '/ask';
         const payload = buildPayload(userContent);
-        const response = await fetch(`${API}/chat`, {
+        
+        const response = await fetch(`${API}${endpoint}`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify(payload),
@@ -383,11 +391,19 @@ function buildPayload(userContent) {
         content: m.content,
     }));
 
-    return {
-        mode:    state.mode,
-        message: userContent,
-        history,
-    };
+    // Different payload structure for different endpoints
+    if (state.mode === 'pyqa') {
+        return {
+            messages: history.concat([{ role: 'user', content: userContent }]),
+            question: userContent,  // Include question field for backward compatibility
+        };
+    } else {
+        // Code review mode - use ask endpoint
+        return {
+            question: userContent,
+            // Note: Attachments are already included in userContent
+        };
+    }
 }
 
 function setBusyState(busy) {
