@@ -49,8 +49,8 @@ Question:
         # ✅ LLM call
         result = chat(prompt)
 
-        # ✅ Frontend expects 'answer'
-        return jsonify({"answer": result})
+        # ✅ Frontend expects 'response'
+        return jsonify({"response": result})
 
     except Exception as e:
         print("ERROR in /ask:", e)
