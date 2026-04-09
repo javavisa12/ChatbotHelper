@@ -33,10 +33,8 @@ const state = {
     sidebarCollapsed:  false,
 };
 
-const ENDPOINTS = {
-    pyqa:   '/pyqa',
-    review: '/ask',  // Code review uses the ask endpoint with attached files
-};
+// Global storage for code blocks (for copy/download)
+window.codeBlocks = {};
 
 // ======================== UTILITIES ========================
 function esc(s) {
@@ -216,7 +214,7 @@ function renderMessages() {
 }
 
 /**
- * Light formatter: wrap ```...``` blocks in <pre><code>, escape the rest.
+ * Enhanced formatter: wrap ```...``` blocks with copy/download buttons
  */
 function formatBubble(text, isUser) {
     if (isUser) return esc(text);
@@ -225,12 +223,117 @@ function formatBubble(text, isUser) {
     const parts = text.split(/(```[\s\S]*?```)/g);
     return parts.map(part => {
         if (part.startsWith('```')) {
-            const inner = part.replace(/^```[^\n]*\n?/, '').replace(/```$/, '');
-            return `<pre><code>${esc(inner)}</code></pre>`;
+            // Extract language and code
+            const lines = part.split('\n');
+            const firstLine = lines[0];
+            const language = firstLine.replace('```', '').trim() || 'text';
+            
+            // Remove first and last line (the ``` markers)
+            lines.shift(); // Remove opening ```
+            lines.pop();   // Remove closing ```
+            const code = lines.join('\n');
+            
+            // Create unique ID for this code block
+            const blockId = 'code_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // Store code content globally for download
+            window.codeBlocks[blockId] = { code, language };
+            
+            return `
+                <div class="code-block-wrapper">
+                    <div class="code-block-header">
+                        <span class="code-language">${esc(language)}</span>
+                        <div class="code-block-actions">
+                            <button class="code-btn copy-code-btn" onclick="copyCodeBlock('${blockId}')" title="Copy code">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                                <span>Copy</span>
+                            </button>
+                            <button class="code-btn download-code-btn" onclick="downloadCodeBlock('${blockId}')" title="Download code">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span>Download</span>
+                            </button>
+                        </div>
+                    </div>
+                    <pre><code class="language-${esc(language)}">${esc(code)}</code></pre>
+                </div>
+            `;
         }
         // Inline code
         return esc(part).replace(/`([^`]+)`/g, '<code>$1</code>');
     }).join('');
+}
+
+/**
+ * Copy code block content to clipboard
+ */
+function copyCodeBlock(blockId) {
+    const block = window.codeBlocks && window.codeBlocks[blockId];
+    if (!block) return;
+    
+    navigator.clipboard.writeText(block.code).then(() => {
+        const btn = document.querySelector(`[onclick="copyCodeBlock('${blockId}')"]`);
+        if (btn) {
+            const span = btn.querySelector('span');
+            const originalText = span.textContent;
+            span.textContent = 'Copied!';
+            setTimeout(() => {
+                span.textContent = originalText;
+            }, 1500);
+        }
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
+
+/**
+ * Download code block as file
+ */
+function downloadCodeBlock(blockId) {
+    const block = window.codeBlocks && window.codeBlocks[blockId];
+    if (!block) return;
+    
+    // Map language to file extension
+    const extMap = {
+        'python': '.py', 'py': '.py',
+        'javascript': '.js', 'js': '.js',
+        'typescript': '.ts', 'ts': '.ts',
+        'html': '.html', 'css': '.css',
+        'json': '.json', 'yaml': '.yml', 'yml': '.yml',
+        'markdown': '.md', 'md': '.md',
+        'sql': '.sql', 'shell': '.sh', 'bash': '.sh', 'sh': '.sh',
+        'text': '.txt', 'txt': '.txt'
+    };
+    
+    const ext = extMap[block.language.toLowerCase()] || '.txt';
+    const filename = `code_snippet${ext}`;
+    
+    const blob = new Blob([block.code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Show feedback on button
+    const btn = document.querySelector(`[onclick="downloadCodeBlock('${blockId}')"]`);
+    if (btn) {
+        const span = btn.querySelector('span');
+        const originalText = span.textContent;
+        span.textContent = 'Downloaded!';
+        setTimeout(() => {
+            span.textContent = originalText;
+        }, 1500);
+    }
 }
 
 function appendThinkingBubble() {
@@ -257,7 +360,12 @@ function removeThinkingBubble() {
 function copyBubble(btn) {
     const bubble = btn.previousElementSibling;
     if (!bubble) return;
-    navigator.clipboard.writeText(bubble.innerText || bubble.textContent).then(() => {
+    
+    // Get text content without the copy/download buttons text
+    const clone = bubble.cloneNode(true);
+    clone.querySelectorAll('.code-block-header, .code-btn').forEach(el => el.remove());
+    
+    navigator.clipboard.writeText(clone.innerText || clone.textContent).then(() => {
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
     });
@@ -395,13 +503,11 @@ function buildPayload(userContent) {
     if (state.mode === 'pyqa') {
         return {
             messages: history.concat([{ role: 'user', content: userContent }]),
-            question: userContent,  // Include question field for backward compatibility
+            question: userContent,
         };
     } else {
-        // Code review mode - use ask endpoint
         return {
             question: userContent,
-            // Note: Attachments are already included in userContent
         };
     }
 }
@@ -499,6 +605,8 @@ window.autoResizeTextarea = autoResizeTextarea;
 window.removeAttachment   = removeAttachment;
 window.setMode            = setMode;
 window.copyBubble         = copyBubble;
+window.copyCodeBlock      = copyCodeBlock;
+window.downloadCodeBlock  = downloadCodeBlock;
 window.doLogout           = doLogout;
 
 // Boot
