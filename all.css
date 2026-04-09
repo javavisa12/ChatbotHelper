@@ -346,6 +346,88 @@ header .brand {
     border-radius: 4px;
     padding: 1px 5px;
 }
+
+/* ── Code Block Wrapper ───────────────────────────────────── */
+.code-block-wrapper {
+    position: relative;
+    margin: 8px 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #1e2433;
+}
+
+.code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #2d3445;
+    border-bottom: 1px solid #3a4255;
+}
+
+.code-language {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #9ca3af;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.code-block-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.code-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid #4a5368;
+    border-radius: 4px;
+    color: #d1d5db;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.code-btn:hover {
+    background: #3a4255;
+    border-color: #5a6378;
+    color: #f3f4f6;
+}
+
+.code-btn svg {
+    flex-shrink: 0;
+}
+
+.code-btn span {
+    font-size: 11px;
+}
+
+.code-block-wrapper pre {
+    margin: 0 !important;
+    padding: 12px 14px !important;
+    background: #1e2433 !important;
+    border-radius: 0 !important;
+    overflow-x: auto;
+}
+
+.code-block-wrapper pre code {
+    color: #e2e8f0 !important;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+/* Keep old pre styling for backward compatibility */
 .bubble pre {
     background: #1e2433;
     color: #e2e8f0;
