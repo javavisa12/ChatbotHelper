@@ -12,25 +12,30 @@ def ask():
     '''Ask a question about attached files/project.'''
 
     try:
-        # ✅ Session check
-        session_id = session.get("session_id")
-        if not session_id:
-            return jsonify({"error": "No session found."}), 400
-
-        # ✅ Get project files
-        code, _ = get_project(session_id)
-        if not code:
-            return jsonify({"error": "No files attached."}), 400
-
-        # ✅ Get request data safely
+        # Get request data safely
         data = request.get_json() or {}
         question = data.get("question", "").strip()
+        
+        # Also check for 'message' field (for compatibility)
+        if not question:
+            question = data.get("message", "").strip()
 
         if not question:
             return jsonify({"error": "No question provided."}), 400
 
-        # ✅ Prompt
-        prompt = f"""
+        # Try to get session files, but don't require them
+        session_id = session.get("session_id")
+        code = ""
+        if session_id:
+            code, _ = get_project(session_id)
+        
+        # If files are attached inline in the question, they're already there
+        # Check if the question contains attached file markers
+        has_attachments = "📎" in question or "FILE:" in question
+
+        # Build prompt based on whether we have code context
+        if code or has_attachments:
+            prompt = f"""
 You are a senior Python engineer.
 Answer based on the attached files.
 
@@ -39,18 +44,31 @@ Rules:
 - Clean code
 - Code in code block
 
-Project:
-{code}
+Project/Attached files:
+{code if code else '(Files included inline in the question)'}
+
+Question:
+{question}
+"""
+        else:
+            prompt = f"""
+You are a senior Python engineer.
+Answer clearly and concisely.
+
+Rules:
+- Short explanation (1-2 sentences)
+- Provide working code
+- Clean code
 
 Question:
 {question}
 """
 
-        # ✅ LLM call
+        # LLM call
         result = chat(prompt)
 
-        # ✅ Frontend expects 'response'
-        return jsonify({"response": result})
+        # Frontend expects 'response' or 'answer'
+        return jsonify({"response": result, "answer": result})
 
     except Exception as e:
         print("ERROR in /ask:", e)
