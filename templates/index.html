@@ -1,161 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PyAssist</title>
-
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Barlow+Condensed:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet"/>
-
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/base/base.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/input.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/empty-card/empty-card.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/chat.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-block.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-copy.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/code/code-download.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/message/message.css') }}"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/chat/thinking/thinking.css') }}"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>PyAssist · Python Code Expert</title>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Unified CSS -->
+  <link rel="stylesheet" href="pyassist.css">
 </head>
 <body>
-
-<div class="shell">
-
-  <aside class="sidebar">
-
-    <div class="sidebar-head">
-      <span class="wordmark">Py<em>Assist</em></span>
-      <span class="tagline">Python expert</span>
-      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-
-    <nav class="nav">
-      <div class="nav-section">
-        <span class="nav-label">Workspace</span>
-
-        <button class="nav-btn active" id="btn-ask" onclick="setMode('ask')">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-          </svg>
-          Code Review
-        </button>
-
-        <button class="nav-btn" id="btn-pyqa" onclick="setMode('pyqa')">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <path d="M12 17h.01"/>
-          </svg>
-          Python Q&A
+  <div class="shell">
+    <!-- ========== SIDEBAR (RED) ========== -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="wordmark">Py<em>Assist</em></div>
+        <div class="tagline">Python Expert</div>
+        <button class="sidebar-toggle" id="sidebarToggleBtn" title="Collapse sidebar">
+          <span></span>
+          <span></span>
+          <span></span>
         </button>
       </div>
-    </nav>
 
-    <div class="status-box">
-      <div class="status-item">
-        <div class="pip err" id="pip-conn"></div>
-        <span>Backend</span>
-        <span class="status-val" id="val-conn">offline</span>
-      </div>
-      <div class="status-item">
-        <div class="pip dim" id="pip-llm"></div>
-        <span>LLM</span>
-        <span class="status-val" id="val-llm">—</span>
-      </div>
-      <div class="status-item">
-        <div class="pip dim" id="pip-pool"></div>
-        <span>Pool</span>
-        <span class="status-val" id="val-pool">—</span>
-      </div>
-      <div class="status-item">
-        <div class="pip" id="pip-proj"></div>
-        <span>Project</span>
-        <span class="status-val" id="val-proj">none</span>
-      </div>
-    </div>
+      <!-- Navigation -->
+      <nav class="nav">
+        <div class="nav-section">
+          <div class="nav-label">Mode</div>
+          <button class="nav-btn active" id="btn-ask" onclick="setMode('ask')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Ask
+          </button>
+          <button class="nav-btn" id="btn-pyqa" onclick="setMode('pyqa')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 14l3-3 3 3M3 21h18a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
+            </svg>
+            Q&amp;A
+          </button>
+          <button class="nav-btn" id="btn-analyze" onclick="setMode('analyze')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+            </svg>
+            Analyze
+          </button>
+          <button class="nav-btn" id="btn-review" onclick="setMode('review')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+            </svg>
+            Review
+          </button>
+          <button class="nav-btn" id="btn-refactor" onclick="setMode('refactor')">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 1 2 2m-3 7h3"/>
+            </svg>
+            Refactor
+          </button>
+        </div>
+      </nav>
 
-  </aside>
-
-  <main class="main">
-
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="mode-crumb">Mode &mdash; <b id="crumb-mode">Code Review</b></div>
-        <div class="conn-pill err" id="connPill">
-          <div class="pip err" id="pill-pip"></div>
-          <span id="pill-txt">Disconnected</span>
+      <!-- Status Box -->
+      <div class="status-box">
+        <div class="status-item">
+          <div class="pip" id="pip-conn"></div>
+          <span id="val-conn">offline</span>
+        </div>
+        <div class="status-item">
+          <div class="pip" id="pip-llm"></div>
+          <span id="val-llm">—</span>
+        </div>
+        <div class="status-item">
+          <div class="pip" id="pip-proj"></div>
+          <span id="val-proj" class="status-val">no project</span>
         </div>
       </div>
-      <div class="topbar-right">
-        <button class="btn-ghost" onclick="clearChat()">Clear</button>
-      </div>
-    </div>
+    </aside>
 
-    <div class="chat" id="chat">
-      <div class="empty" id="emptyState">
-        <div class="empty-grid">
-          <div class="empty-card" onclick="setMode('ask'); fillPrompt('Review the code quality and suggest specific improvements.')">
-            <div class="card-tag">Review</div>
-            <div class="card-text">Full code review</div>
-          </div>
-          <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
-            <div class="card-tag">Python Q&amp;A</div>
-            <div class="card-text">General Python Question</div>
+    <!-- ========== MAIN AREA ========== -->
+    <div class="main">
+      <!-- RED TOPBAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle-top" id="topbarToggleBtn" title="Toggle sidebar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="mode-crumb">
+            <span id="crumb-mode">Ask About Files</span>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="input-area">
-
-      <div class="input-context">
-        <div class="mode-badge" id="modeBadge">Ask</div>
-        <span class="ctx-desc" id="ctxDesc">Ask a question about your loaded project</span>
-      </div>
-
-      <div class="attach-strip" id="attachStrip">
-        <button class="attach-pill" onclick="document.getElementById('fileInput').click()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          Attach Files
-        </button>
-        <button class="attach-pill" onclick="attachFolder()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Attach Folder
-        </button>
-      </div>
-
-      <div class="chips-row" id="chipsRow"></div>
-
-      <div class="composer">
-        <div class="textarea-frame">
-          <textarea id="msgInput" rows="1" placeholder="Enter your query…"
-            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <div class="topbar-right">
+          <div class="conn-pill" id="connPill">
+            <span id="pill-txt">Disconnected</span>
+          </div>
+          <button class="btn-ghost" id="clearBtn" onclick="clearChat()">Clear</button>
         </div>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          Send
-        </button>
       </div>
 
-      <div class="hint-line">
-        <kbd>Shift+Enter</kbd> for newline &nbsp;&middot;&nbsp; <kbd>Enter</kbd> to send
+      <!-- CHAT AREA -->
+      <div class="chat" id="chat">
+        <div class="empty" id="emptyState">
+          <div class="empty-heading">Analyse.<br><em>Debug.</em><br>Understand.</div>
+          <div class="empty-sub">Attach files to begin.</div>
+          <div class="empty-grid">
+            <div class="empty-card" onclick="fillPrompt('Summarize what this project does and identify its main components.')">
+              <div class="card-tag">Project</div>
+              <div class="card-text">Summarize this project</div>
+            </div>
+            <div class="empty-card" onclick="fillPrompt('Find all potential bugs and edge cases in this code.')">
+              <div class="card-tag">Debug</div>
+              <div class="card-text">Find potential bugs</div>
+            </div>
+            <div class="empty-card" onclick="fillPrompt('Review the code quality and suggest specific improvements.')">
+              <div class="card-tag">Review</div>
+              <div class="card-text">Full code review</div>
+            </div>
+            <div class="empty-card" onclick="setMode('pyqa'); fillPrompt('Explain Python decorators with examples.')">
+              <div class="card-tag">Python Q&amp;A</div>
+              <div class="card-text">No files needed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INPUT AREA -->
+      <div class="input-area">
+        <div class="input-context">
+          <div class="mode-badge" id="modeBadge">ASK</div>
+          <div class="ctx-desc" id="ctxDesc">Ask a question about your attached files</div>
+        </div>
+
+        <!-- Attachments Area -->
+        <div class="attachments-area" id="attachmentsArea"></div>
+
+        <!-- Attach Strip (hidden for pyqa mode) -->
+        <div id="attachStrip" class="attach-strip">
+          <button class="attach-pill" onclick="document.getElementById('fileInput').click()">
+            + Attach Files
+          </button>
+          <button class="attach-pill" onclick="attachFolder()">
+            + Folder
+          </button>
+        </div>
+
+        <!-- File Chips Row (for text-only display, hidden for pyqa) -->
+        <div id="chipsRow" class="chips-row"></div>
+
+        <!-- Composer -->
+        <div class="composer">
+          <!-- Upload Button -->
+          <button class="upload-btn" id="uploadBtn" title="Upload files">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 3v12m0 0l-3-3m3 3l3-3M5 21h14"/>
+            </svg>
+          </button>
+
+          <!-- Text Input -->
+          <div class="textarea-frame">
+            <textarea 
+              id="msgInput" 
+              placeholder="Ask a question..." 
+              onkeydown="handleKey(event)" 
+              oninput="autoResize(this)">
+            </textarea>
+          </div>
+
+          <!-- Send Button -->
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            SEND
+          </button>
+        </div>
+
+        <!-- Hint -->
+        <div class="hint-line">
+          <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line · Attach files above
+        </div>
       </div>
     </div>
+  </div>
 
-  </main>
-</div>
+  <!-- Hidden file input -->
+  <input type="file" id="fileInput" multiple accept=".py,.txt,.md,.json,.yaml,.yml" style="display: none;">
 
-<input type="file" id="fileInput" multiple
-  accept=".py,.txt,.json,.md,.yaml,.yml,.toml,.cfg,.ini,.js,.ts,.html,.css,.csv"
-  onchange="handleFiles(event)"/>
-<input type="file" id="folderInput" multiple webkitdirectory
-  onchange="handleFiles(event)"/>
-
-<script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
-
+  <!-- Unified JavaScript -->
+  <script src="pyassist.js"></script>
 </body>
 </html>
