@@ -33,4 +33,3 @@ def load_files():
 
     names = load_uploaded_files(files, session_id)
     return jsonify({"message": f"Loaded {len(names)} files", "files": names})
-
