@@ -28,7 +28,9 @@ def status():
         "llm_loader": health.get("status"),
         "pool_total": health.get("pool_total"),
         "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"]
+        "session_id": session["session_id"],
+         "project_loaded": bool(session.get("project_path")), 
+        "project_path": session.get("project_path")  
     })
 
 
@@ -55,7 +57,7 @@ def pyqa():
                     "- Clean code"
                 )
             }
-            return jsonify({"answer": chat(messages)})  # ✅ FIXED
+            return jsonify({"response": chat(messages)})  # ✅ FIXED
 
         prompt = f"""
 You are a senior Python engineer.
@@ -69,7 +71,7 @@ Rules:
 Question:
 {question}
 """
-        return jsonify({"answer": chat(prompt)})  # ✅ FIXED
+        return jsonify({"response": chat(prompt)})  # ✅ FIXED
 
     except Exception as e:
         print("ERROR:", e)
