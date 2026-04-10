@@ -4,8 +4,8 @@
 
 /* ── Design tokens ────────────────────────────────────────── */
 :root {
-    --primary:        #1a56db;
-    --primary-dark:   #1447b8;
+    --primary:        #f30e19;
+    --primary-dark:   #e92929;
     --primary-light:  #e8effe;
 
     --surface:        #ffffff;
