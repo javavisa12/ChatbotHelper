@@ -1,26 +1,39 @@
-/* ── Message Timestamps ───────────────────────────────────── */
-.bubble-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-width: 100%;
-}
+// ... (inside renderMessages()) ...
 
-.msg-footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.8;
-    padding: 0 4px;
-}
+    let html = '';
+    for (const msg of state.messages) {
+        const isUser  = msg.role === 'user';
+        const cls     = isUser ? 'message user' : 'message assistant';
+        const avatar  = isUser ? 'You' : 'PyAI';
+        const content = formatBubble(msg.content, isUser);
 
-.message.user .msg-footer {
-    justify-content: flex-end;
-}
+        // Format Timestamp & Response time
+        const timeStr = msg.timestamp || '';
+        let metaHtml = '';
+        
+        if (isUser) {
+            if (timeStr) metaHtml = `<div class="msg-footer">Sent ${timeStr}</div>`;
+        } else {
+            const respTimeStr = msg.responseTime ? `${msg.responseTime}s` : '';
+            const timeDisplay = [timeStr, respTimeStr].filter(Boolean).join(' • ');
+            
+            // Put the timestamp and the copy button in the footer area
+            metaHtml = `<div class="msg-footer">
+                ${timeDisplay ? `<span>${timeDisplay}</span>` : ''}
+                <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
+            </div>`;
+        }
 
-/* Adjust copy button since it is now inside the flex footer */
-.msg-footer .copy-btn {
-    margin-top: 0; 
+        html += `
+            <div class="${cls}">
+                <div class="avatar">${avatar}</div>
+                <div class="bubble-wrapper">
+                    <div class="bubble">${content}</div>
+                    ${metaHtml}
+                </div>
+            </div>`;
+    }
+
+    container.innerHTML = html;
+    container.scrollTop = container.scrollHeight;
 }
