@@ -1,52 +1,51 @@
-// ======================== SIDEBAR ========================
-// ... (keep toggleSidebar and initSidebar as they are) ...
-
-function renderSessionList() {
-    const list = document.getElementById('session-list');
-    if (!list) return;
-
-    if (state.sessions.size === 0) {
-        list.innerHTML = '<div class="sidebar-empty">No past sessions</div>';
-        return;
-    }
-
-    let html = '';
-    for (const [id, sess] of state.sessions) {
-        const isActive   = id === state.currentSessionId;
-        const label      = sess.name.length > 28 ? sess.name.slice(0, 25) + '…' : sess.name;
-        const modeTag    = MODES[sess.mode] ? `<span style="font-size:11px;opacity:.6">${MODES[sess.mode].icon}</span> ` : '';
-        
-        // Updated HTML injection to include the title wrapper and delete button
-        html += `
-            <div class="session-item${isActive ? ' active' : ''}" onclick="switchSession('${id}')">
-                <div class="session-item-title">${modeTag}${label}</div>
-                <button class="delete-session-btn" onclick="deleteSession(event, '${id}')" title="Delete chat" aria-label="Delete chat">✕</button>
-            </div>`;
-    }
-    list.innerHTML = html;
+/* ── Sidebar (Updated) ────────────────────────────────────── */
+.session-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    border-left: 3px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.session-item:hover { background: var(--hover); }
+.session-item.active {
+    border-left-color: var(--primary);
+    background: var(--hover);
+    font-weight: 500;
 }
 
-// NEW: Function to handle session deletion
-function deleteSession(event, sessionId) {
-    // Prevent the click from bubbling up and triggering switchSession
-    event.stopPropagation();
+/* Wrapper to keep the text truncating properly */
+.session-item-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+}
 
-    // Optional confirmation dialog
-    if (!confirm('Are you sure you want to delete this chat session?')) return;
-
-    // Remove from state
-    state.sessions.delete(sessionId);
-    persistSessions();
-
-    if (state.sessions.size === 0) {
-        // If no sessions are left, create a new empty chat
-        newChat();
-    } else if (state.currentSessionId === sessionId) {
-        // If we deleted the currently active chat, switch to the most recent one
-        const firstId = Array.from(state.sessions.keys())[0];
-        switchSession(firstId);
-    } else {
-        // If we deleted a background chat, just re-render the sidebar
-        renderSessionList();
-    }
+/* Delete button styles */
+.delete-session-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0; /* Hidden until hovered */
+    transition: opacity 0.2s, background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.session-item:hover .delete-session-btn {
+    opacity: 1;
+}
+.delete-session-btn:hover {
+    background: rgba(243, 14, 25, 0.1);
+    color: var(--primary);
 }
