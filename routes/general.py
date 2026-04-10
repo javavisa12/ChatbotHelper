@@ -8,17 +8,26 @@ from llm.model import health_check
 general = Blueprint("general", __name__)
 
 
+SYSTEM_PROMPT = (
+    "You are a senior Python engineer.\n"
+    "Answer clearly and concisely.\n\n"
+    "Rules:\n"
+    "- Short explanation (1-2 sentences)\n"
+    "- Provide working code\n"
+    "- Clean code"
+)
+
+
 @general.route("/")
 def index():
     return render_template("index.html")
 
 
-# ✅ FIXED: removed /api + added session init
+# ✅ Status route with session init
 @general.route("/api/status", methods=["GET"])
 def status():
     if "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
-
 
     health = health_check()
 
@@ -29,12 +38,12 @@ def status():
         "pool_total": health.get("pool_total"),
         "pool_idle": health.get("pool_idle"),
         "session_id": session["session_id"],
-         "project_loaded": bool(session.get("project_path")), 
-        "project_path": session.get("project_path")  
+        "project_loaded": bool(session.get("project_path")),
+        "project_path": session.get("project_path")
     })
 
 
-# ✅ FIXED: renamed route + fixed response key
+# ✅ Main chat route
 @general.route("/api/pyqa", methods=["POST"])
 def pyqa():
     data = request.get_json() or {}
@@ -45,33 +54,56 @@ def pyqa():
         return jsonify({"error": "Question is empty."}), 400
 
     try:
+        # ✅ Ensure session exists
+        if "session_id" not in session:
+            session["session_id"] = str(uuid.uuid4())
+
+        # ✅ Initialize chat history if not exists
+        if "history" not in session:
+            session["history"] = []
+
+        # =========================
+        # CASE 1: Chat messages mode
+        # =========================
         if messages:
-            messages[0] = {
+            # Inject system prompt WITHOUT overwriting user message
+            messages.insert(0, {
                 "role": "system",
-                "content": (
-                    "You are a senior Python engineer.\n"
-                    "Answer clearly and concisely.\n"
-                    "Rules:\n"
-                    "- Short explanation (1-2 sentences)\n"
-                    "- Provide working code\n"
-                    "- Clean code"
-                )
-            }
-            return jsonify({"response": chat(messages)})  # ✅ FIXED
+                "content": SYSTEM_PROMPT
+            })
 
-        prompt = f"""
-You are a senior Python engineer.
-Answer clearly and concisely.
+            print("MESSAGES SENT:", messages)  # Debug
 
-Rules:
-- Short explanation (1-2 sentences)
-- Provide working code
-- Clean code
+            response = chat(messages)
 
-Question:
-{question}
-"""
-        return jsonify({"response": chat(prompt)})  # ✅ FIXED
+            return jsonify({"response": response})
+
+        # =========================
+        # CASE 2: Simple question mode
+        # =========================
+        else:
+            # Store user message
+            session["history"].append({
+                "role": "user",
+                "content": question
+            })
+
+            # Build full conversation
+            full_messages = [
+                {"role": "system", "content": SYSTEM_PROMPT}
+            ] + session["history"]
+
+            print("MESSAGES SENT:", full_messages)  # Debug
+
+            response = chat(full_messages)
+
+            # Store assistant reply
+            session["history"].append({
+                "role": "assistant",
+                "content": response
+            })
+
+            return jsonify({"response": response})
 
     except Exception as e:
         print("ERROR:", e)
