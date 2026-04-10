@@ -184,7 +184,7 @@ function renderMessages() {
     if (state.messages.length === 0) {
         container.innerHTML = `
             <div class="message assistant">
-                <div class="avatar">AI</div>
+                <div class="avatar">PyAI</div>
                 <div class="bubble-wrapper">
                     <div class="bubble">Hello! I'm PyAssist. Switch between <strong>Python Q&amp;A</strong> for language questions and <strong>Code Review</strong> to get feedback on your code.</div>
                 </div>
@@ -196,7 +196,7 @@ function renderMessages() {
     for (const msg of state.messages) {
         const isUser  = msg.role === 'user';
         const cls     = isUser ? 'message user' : 'message assistant';
-        const avatar  = isUser ? 'You' : 'AI';
+        const avatar  = isUser ? 'You' : 'PyAI';
         const content = formatBubble(msg.content, isUser);
 
         html += `
@@ -344,7 +344,7 @@ function appendThinkingBubble() {
     div.className = 'message assistant';
     div.id = 'thinking-msg';
     div.innerHTML = `
-        <div class="avatar">AI</div>
+        <div class="avatar">PyAI</div>
         <div class="bubble-wrapper">
             <div class="bubble"><span class="status-indicator active">Thinking<span class="cursor"></span></span></div>
         </div>`;
@@ -529,7 +529,7 @@ function showOfflineWarning() {
     const div = document.createElement('div');
     div.className = 'message assistant';
     div.innerHTML = `
-        <div class="avatar">AI</div>
+        <div class="avatar">PyAI</div>
         <div class="bubble-wrapper">
             <div class="bubble" style="color:#b91c1c">⚠️ Backend is offline. Please start the server and try again.</div>
         </div>`;
@@ -607,7 +607,6 @@ window.setMode            = setMode;
 window.copyBubble         = copyBubble;
 window.copyCodeBlock      = copyCodeBlock;
 window.downloadCodeBlock  = downloadCodeBlock;
-window.doLogout           = doLogout;
 
 // Boot
 if (document.readyState === 'loading') {
