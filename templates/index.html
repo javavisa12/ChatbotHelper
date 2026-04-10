@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PyAssist - Python Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/css/all.css">
 </head>
 <body>
 
 <header>
     <div class="brand">
         <button id="toggle-sidebar" type="button" onclick="toggleSidebar()" title="Toggle chat history" aria-label="Toggle chat history">&#9776;</button>
-        <a href="/crossroad" class="back-link">PyAssist</a>
+        <a class="back-link">PyAssist</a>
     </div>
 
     <div class="header-center">
@@ -31,7 +31,6 @@
             <span id="status-text">Connecting...</span>
         </div>
         <span id="welcome-text"></span>
-        <button id="logout-btn" class="btn btn--ghost btn--sm" onclick="doLogout()">Sign Out</button>
     </div>
 </header>
 
@@ -56,7 +55,7 @@
 
         <div id="messages">
             <div class="message assistant">
-                <div class="avatar">AI</div>
+                <div class="avatar">PyAI</div>
                 <div class="bubble-wrapper">
                     <div class="bubble">Hello! I'm PyAssist. Switch between <strong>Python Q&amp;A</strong> for language questions and <strong>Code Review</strong> to get feedback on your code.</div>
                 </div>
@@ -87,6 +86,6 @@
     </div>
 </div>
 
-<script src="app.js"></script>
+<script src="/static/js/all.js"></script>
 </body>
 </html>
