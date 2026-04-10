@@ -1,39 +1,50 @@
-// ... (inside renderMessages()) ...
+// ... (inside sendMessage, right after building userContent) ...
 
-    let html = '';
-    for (const msg of state.messages) {
-        const isUser  = msg.role === 'user';
-        const cls     = isUser ? 'message user' : 'message assistant';
-        const avatar  = isUser ? 'You' : 'PyAI';
-        const content = formatBubble(msg.content, isUser);
+    // 1. Capture User Timestamp
+    const userTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    state.messages.push({ role: 'user', content: userContent, timestamp: userTime });
+    renderMessages();
 
-        // Format Timestamp & Response time
-        const timeStr = msg.timestamp || '';
-        let metaHtml = '';
+    // Clear
+    if (inp) { inp.value = ''; inp.style.height = ''; }
+
+    appendThinkingBubble();
+    state.busy = true;
+    setBusyState(true);
+
+    // 2. Start timer for AI response
+    const startTime = Date.now();
+
+    try {
+        // Choose endpoint based on mode
+        const endpoint = state.mode === 'pyqa' ? '/pyqa' : '/ask';
+        const payload = buildPayload(userContent);
         
-        if (isUser) {
-            if (timeStr) metaHtml = `<div class="msg-footer">Sent ${timeStr}</div>`;
-        } else {
-            const respTimeStr = msg.responseTime ? `${msg.responseTime}s` : '';
-            const timeDisplay = [timeStr, respTimeStr].filter(Boolean).join(' • ');
-            
-            // Put the timestamp and the copy button in the footer area
-            metaHtml = `<div class="msg-footer">
-                ${timeDisplay ? `<span>${timeDisplay}</span>` : ''}
-                <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
-            </div>`;
+        const response = await fetch(`${API}${endpoint}`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(payload),
+            signal:  AbortSignal.timeout(60000),
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Server error ${response.status}: ${err}`);
         }
 
-        html += `
-            <div class="${cls}">
-                <div class="avatar">${avatar}</div>
-                <div class="bubble-wrapper">
-                    <div class="bubble">${content}</div>
-                    ${metaHtml}
-                </div>
-            </div>`;
-    }
+        const data  = await response.json();
+        const reply = data.answer || data.response || data.message || 'No response from server.';
 
-    container.innerHTML = html;
-    container.scrollTop = container.scrollHeight;
-}
+        // 3. Stop timer, calculate duration, and get AI timestamp
+        const endTime = Date.now();
+        const responseTimeSec = ((endTime - startTime) / 1000).toFixed(1);
+        const aiTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        state.messages.push({ 
+            role: 'assistant', 
+            content: reply,
+            timestamp: aiTime,
+            responseTime: responseTimeSec // Save the duration
+        });
+
+        // ... (keep the rest of the function the same: persist session, catch blocks, etc.)
