@@ -1,17 +1,16 @@
+class BankAccount:
+    def _init_(self, balance):
+        self.balance = balance
 
-#resource management, and exception handling
+    def deposit(amount):
+        self.balance += amount
 
+    def withdraw(self, amount):
+        if amount > self.balance:
+            print("Insufficient funds")
+        else:
+            self.balance -= amount
 
-def add_item_to_list(item, my_list=[]):
-    my_list.append(item)
-    return my_list
-
-def process_file(filename):
-    file = open(filename, 'r')
-    data = file.read()
-    print("File processed successfully.")
-    return data
-
-print(add_item_to_list("apple"))
-print(add_item_to_list("banana"))
-content = process_file("config.json")
+acc = BankAccount(1000)
+acc.deposit(500)
+print(acc.balance)
