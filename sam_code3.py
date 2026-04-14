@@ -1,66 +1,112 @@
-
-#Thread safety (race conditions), mutable class attributes (state leakage), silent failures, and arbitrary code execution vulnerabilities.
-
-
-import threading
+import os
 import json
-import requests
-import time
+from flask import Flask, request, jsonify, session
 
-class BankAccount:
-    # Track all transactions for the account
-    transactions = [] 
-    
-    def __init__(self, owner_name, initial_balance):
-        self.owner = owner_name
-        self.balance = initial_balance
-        
-    def deposit(self, amount):
-        # Read current balance
-        current_balance = self.balance 
-        
-        # Simulate network latency or database write time
-        time.sleep(0.01) 
-        
-        # Update balance
-        self.balance = current_balance + amount
-        self.transactions.append("Deposited: $" + str(amount))
-        
-    def withdraw(self, amount):
-        try:
-            if self.balance - amount < 0:
-                raise Exception("Insufficient funds")
-            self.balance -= amount
-            self.transactions.append("Withdrew: $" + str(amount))
-        except Exception as e:
-            # Ignore errors for now so the app doesn't crash
-            pass 
+app = Flask(__name__)
+app.secret_key = "secret"  # insecure hardcoded secret
 
-def run_payroll(account, amount, times):
-    threads = []
-    # Process multiple deposits concurrently to save time
-    for _ in range(times):
-        t = threading.Thread(target=account.deposit, args=(amount,))
-        threads.append(t)
-        t.start()
-        
-    for t in threads:
-        t.join()
+USERS = {}
+CHAT_HISTORY = "chat_history.json"
 
-def load_user_config(json_payload):
-    # Convert string payload to dictionary
-    config = eval(json_payload) 
-    return config
 
-# --- Execution ---
-alice_account = BankAccount("Alice", 100)
-bob_account = BankAccount("Bob", 50)
+class User:
+    def _init_(self, username, password):
+        self.username = username
+        self.password = password
 
-# Deposit $10, 100 separate times concurrently into Alice's account
-run_payroll(alice_account, 10, 100)
+    def check_password(self, pwd):
+        return self.password == pwd
 
-print(f"Alice's final balance: {alice_account.balance}")
-print(f"Bob's transactions: {bob_account.transactions}")
 
-malicious_payload = "__import__('os').system('echo You have been hacked')"
-load_user_config(malicious_payload)
+def load_history():
+    if os.path.exists(CHAT_HISTORY):
+        with open(CHAT_HISTORY, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_history(data):
+    with open(CHAT_HISTORY, "w") as f:
+        json.dump(data, f)
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.json
+    username = data.get("username")
+    password = data.get("password")
+
+    if username in USERS:
+        return jsonify({"error": "User exists"})
+
+    USERS[username] = User(username, password)
+    return jsonify({"message": "Registered successfully"})
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    user = USERS.get(data.get("username"))
+
+    if user and user.check_password(data.get("password")):
+        session["user"] = user.username
+        return jsonify({"message": "Login success"})
+    else:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    message = request.json.get("message")
+
+    history = load_history()
+
+    if session["user"] not in history:
+        history[session["user"]] = []
+
+    history[session["user"]].append({"msg": message})
+
+    # Simulated response
+    reply = "Echo: " + message
+
+    history[session["user"]].append({"reply": reply})
+
+    save_history(history)
+
+    return jsonify({"response": reply})
+
+
+@app.route("/history", methods=["GET"])
+def get_history():
+    user = session.get("user")
+
+    history = load_history()
+
+    return jsonify(history[user])
+
+
+@app.route("/delete", methods=["POST"])
+def delete_user():
+    username = request.json.get("username")
+
+    if username in USERS:
+        del USERS[username]
+
+    return jsonify({"message": "Deleted"})
+
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    file = request.files["file"]
+
+    filepath = os.path.join("uploads", file.filename)
+    file.save(filepath)
+
+    return jsonify({"message": "File uploaded"})
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
