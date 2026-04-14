@@ -1,110 +1,50 @@
-from flask import Blueprint, jsonify, request, render_template, session
-import uuid
+"""Model management for Python Assistant - delegates to company llm_loader service."""
 
-from config import DEFAULT_MODEL
-from llm.chat import chat
-from llm.model import health_check
-
-general = Blueprint("general", __name__)
+import requests
+from config import LLM_LOADER_URL, LLM_LOADER_SECRET
 
 
-SYSTEM_PROMPT = (
-    "You are a senior Python engineer.\n"
-    "Answer clearly and concisely.\n\n"
-    "Rules:\n"
-    "- Short explanation (1-2 sentences)\n"
-    "- Provide working code\n"
-    "- Clean code"
-)
-
-
-@general.route("/")
-def index():
-    return render_template("index.html")
-
-
-# ✅ Status route with session init
-@general.route("/api/status", methods=["POST"])
-def status():
-    if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
-
-    health = health_check()
-
-    return jsonify({
-        "status": "online",
-        "model": DEFAULT_MODEL,
-        "llm_loader": health.post("status"),
-        "pool_total": health.get("pool_total"),
-        "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"],
-        "project_loaded": bool(session.get("project_path")),
-        "project_path": session.get("project_path")
-    })
-
-
-# ✅ Main chat route
-@general.route("/api/pyqa", methods=["POST"])
-def pyqa():
-    data = request.get_json() or {}
-    messages = data.get("messages")
-    question = data.get("question", "").strip()
-
-    if not question and not messages:
-        return jsonify({"error": "Question is empty."}), 400
-
+def health_check() -> dict:
+    """Check if the llm_loader service is reachable and has models loaded."""
     try:
-        # ✅ Ensure session exists
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
-
-        # ✅ Initialize chat history if not exists
-        if "history" not in session:
-            session["history"] = []
-
-        # =========================
-        # CASE 1: Chat messages mode
-        # =========================
-        if messages:
-            # Inject system prompt WITHOUT overwriting user message
-            messages.insert(0, {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            })
-
-            print("MESSAGES SENT:", messages)  # Debug
-
-            response = chat(messages)
-
-            return jsonify({"response": response})
-
-        # =========================
-        # CASE 2: Simple question mode
-        # =========================
-        else:
-            # Store user message
-            session["history"].append({
-                "role": "user",
-                "content": question
-            })
-
-            # Build full conversation
-            full_messages = [
-                {"role": "system", "content": SYSTEM_PROMPT}
-            ] + session["history"]
-
-            print("MESSAGES SENT:", full_messages)  # Debug
-
-            response = chat(full_messages)
-
-            # Store assistant reply
-            session["history"].append({
-                "role": "assistant",
-                "content": response
-            })
-
-            return jsonify({"response": response})
-
+        response = requests.get(
+            f"{LLM_LOADER_URL}/health",
+            headers={"X-Internal-Secret": LLM_LOADER_SECRET},
+            timeout=5,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.ConnectionError:
+        return {"status": "unreachable"}
+    except requests.exceptions.Timeout:
+        return {"status": "timeout"}
     except Exception as e:
-        print("ERROR:", e)
-        return jsonify({"error": str(e)}), 500
+        return {"status": "error", "detail": str(e)}
+
+
+def test_inference() -> dict:
+    """Run a test prompt against the llm_loader service."""
+    try:
+        response = requests.get(
+            f"{LLM_LOADER_URL}/test",
+            headers={"X-Internal-Secret": LLM_LOADER_SECRET},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+
+
+# Verify connection at startup
+_health = health_check()
+_status = _health.get("status")
+
+if _status == "ok":
+    print(f"✅ Connected to llm_loader — pool_total={_health.get('pool_total')}, pool_idle={_health.get('pool_idle')}")
+elif _status == "no_model":
+    print("⚠️  llm_loader reachable but no model loaded")
+elif _status == "unreachable":
+    print(f"❌ Cannot connect to llm_loader at {LLM_LOADER_URL}")
+else:
+    print(f"⚠️  llm_loader status: {_health}")
