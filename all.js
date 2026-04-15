@@ -111,7 +111,6 @@ function renderSessionList() {
         const label      = sess.name.length > 28 ? sess.name.slice(0, 25) + '…' : sess.name;
         const modeTag    = MODES[sess.mode] ? `<span style="font-size:11px;opacity:.6">${MODES[sess.mode].icon}</span> ` : '';
         
-        // Updated HTML injection to include the title wrapper and delete button
         html += `
             <div class="session-item${isActive ? ' active' : ''}" onclick="switchSession('${id}')">
                 <div class="session-item-title">${modeTag}${label}</div>
@@ -122,25 +121,18 @@ function renderSessionList() {
 }
 
 function deleteSession(event, sessionId) {
-    // Prevent the click from bubbling up and triggering switchSession
     event.stopPropagation();
-
-    // Optional confirmation dialog
     if (!confirm('Are you sure you want to delete this chat session?')) return;
 
-    // Remove from state
     state.sessions.delete(sessionId);
     persistSessions();
 
     if (state.sessions.size === 0) {
-        // If no sessions are left, create a new empty chat
         newChat();
     } else if (state.currentSessionId === sessionId) {
-        // If we deleted the currently active chat, switch to the most recent one
         const firstId = Array.from(state.sessions.keys())[0];
         switchSession(firstId);
     } else {
-        // If we deleted a background chat, just re-render the sidebar
         renderSessionList();
     }
 }
@@ -168,7 +160,6 @@ function switchSession(sessionId) {
     state.messages          = [...(sess.messages || [])];
     state.attached          = [];
 
-    // Restore mode if stored
     if (sess.mode && MODES[sess.mode]) setMode(sess.mode);
 
     renderSessionList();
@@ -190,16 +181,28 @@ function loadSessions() {
         const data = JSON.parse(raw);
         state.sessions.clear();
         for (const item of data) {
-           
-          // remove any sessions that have zero chats
-          if (item.messages && item.messages.length > 0){
+            // Migrate old user messages to the new structure
+            const migratedMessages = (item.messages || []).map(msg => {
+                if (msg.role === 'user' && msg.content && !msg.displayContent) {
+                    // Old format: content contains text + file content
+                    // We cannot recover the original text easily, but we can strip code blocks
+                    // for display. Simpler: show a generic "[previous attachment]"
+                    let display = msg.content.replace(/```[\s\S]*?```/g, '[file content hidden]');
+                    return {
+                        role: 'user',
+                        text: msg.content.split('\n')[0], // first line as approximate text
+                        attachments: [],
+                        displayContent: display
+                    };
+                }
+                return msg;
+            });
             state.sessions.set(item.id, {
-                name:     item.name,
-                mode:     item.mode || 'pyqa',
-                messages: item.messages || [],
+                name: item.name,
+                mode: item.mode || 'pyqa',
+                messages: migratedMessages,
             });
         }
-    }
     } catch (err) {
         console.warn('Failed to load sessions:', err);
     }
@@ -223,24 +226,56 @@ function renderMessages() {
 
     let html = '';
     for (const msg of state.messages) {
-        const isUser  = msg.role === 'user';
-        const cls     = isUser ? 'message user' : 'message assistant';
-        const avatar  = isUser ? 'You' : 'PyAI';
-        const content = formatBubble(msg.content, isUser);
+        const isUser = msg.role === 'user';
+        const cls = isUser ? 'message user' : 'message assistant';
+        const avatar = isUser ? 'You' : 'PyAI';
 
-        html += `
-            <div class="${cls}">
-                <div class="avatar">${avatar}</div>
-                <div class="bubble-wrapper">
-                    <div class="bubble">${content}</div>
-                    ${!isUser ? '<button class="copy-btn" onclick="copyBubble(this)">Copy</button>' : ''}
-                </div>
-            </div>`;
+        if (isUser) {
+            // --- User message: separate bubble (text) + attachments below ---
+            const userText = msg.text || '';           // typed message
+            const attachments = msg.attachments || []; // array of { name, content }
+
+            // Bubble: only show if there is text
+            const bubbleHtml = userText.trim() 
+                ? `<div class="bubble">${esc(userText)}</div>` 
+                : '';
+
+            // Attachments list (if any)
+            let attachmentsHtml = '';
+            if (attachments.length > 0) {
+                const chips = attachments.map(att => 
+                    `<div class="file-chip">📄 ${esc(att.name)}</div>`
+                ).join('');
+                attachmentsHtml = `<div class="user-attachments">${chips}</div>`;
+            }
+
+            html += `
+                <div class="${cls}">
+                    <div class="avatar">${avatar}</div>
+                    <div class="bubble-wrapper">
+                        ${bubbleHtml}
+                        ${attachmentsHtml}
+                    </div>
+                </div>`;
+        } else {
+            // Assistant message: unchanged, uses formatBubble for code blocks
+            const contentHtml = formatBubble(msg.content, false);
+            html += `
+                <div class="${cls}">
+                    <div class="avatar">${avatar}</div>
+                    <div class="bubble-wrapper">
+                        <div class="bubble">${contentHtml}</div>
+                        <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
+                    </div>
+                </div>`;
+        }
     }
 
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
 }
+
+
 
 /**
  * Enhanced formatter: wrap ```...``` blocks with copy/download buttons
@@ -248,24 +283,18 @@ function renderMessages() {
 function formatBubble(text, isUser) {
     if (isUser) return esc(text);
 
-    // Split on fenced code blocks
     const parts = text.split(/(```[\s\S]*?```)/g);
     return parts.map(part => {
         if (part.startsWith('```')) {
-            // Extract language and code
             const lines = part.split('\n');
             const firstLine = lines[0];
             const language = firstLine.replace('```', '').trim() || 'text';
             
-            // Remove first and last line (the ``` markers)
-            lines.shift(); // Remove opening ```
-            lines.pop();   // Remove closing ```
+            lines.shift();
+            lines.pop();
             const code = lines.join('\n');
             
-            // Create unique ID for this code block
             const blockId = 'code_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
-            // Store code content globally for download
             window.codeBlocks[blockId] = { code, language };
             
             return `
@@ -294,14 +323,10 @@ function formatBubble(text, isUser) {
                 </div>
             `;
         }
-        // Inline code
         return esc(part).replace(/`([^`]+)`/g, '<code>$1</code>');
     }).join('');
 }
 
-/**
- * Copy code block content to clipboard
- */
 function copyCodeBlock(blockId) {
     const block = window.codeBlocks && window.codeBlocks[blockId];
     if (!block) return;
@@ -316,19 +341,13 @@ function copyCodeBlock(blockId) {
                 span.textContent = originalText;
             }, 1500);
         }
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-    });
+    }).catch(err => console.error('Failed to copy:', err));
 }
 
-/**
- * Download code block as file
- */
 function downloadCodeBlock(blockId) {
     const block = window.codeBlocks && window.codeBlocks[blockId];
     if (!block) return;
     
-    // Map language to file extension
     const extMap = {
         'python': '.py', 'py': '.py',
         'javascript': '.js', 'js': '.js',
@@ -353,15 +372,12 @@ function downloadCodeBlock(blockId) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // Show feedback on button
     const btn = document.querySelector(`[onclick="downloadCodeBlock('${blockId}')"]`);
     if (btn) {
         const span = btn.querySelector('span');
         const originalText = span.textContent;
         span.textContent = 'Downloaded!';
-        setTimeout(() => {
-            span.textContent = originalText;
-        }, 1500);
+        setTimeout(() => { span.textContent = originalText; }, 1500);
     }
 }
 
@@ -387,16 +403,17 @@ function removeThinkingBubble() {
 }
 
 function copyBubble(btn) {
-    const bubble = btn.previousElementSibling;
+    const wrapper = btn.closest('.bubble-wrapper');
+    const bubble = wrapper.querySelector('.bubble');
     if (!bubble) return;
     
-    // Get text content without the copy/download buttons text
     const clone = bubble.cloneNode(true);
     clone.querySelectorAll('.code-block-header, .code-btn').forEach(el => el.remove());
     
     navigator.clipboard.writeText(clone.innerText || clone.textContent).then(() => {
+        const originalText = btn.textContent;
         btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        setTimeout(() => { btn.textContent = originalText; }, 1500);
     });
 }
 
@@ -445,7 +462,7 @@ function handleKeyPress(e) {
 }
 
 async function sendMessage() {
-    const inp  = document.getElementById('chat-input');
+    const inp = document.getElementById('chat-input');
     const text = inp ? inp.value.trim() : '';
 
     if (!text && state.attached.length === 0) return;
@@ -455,29 +472,36 @@ async function sendMessage() {
         return;
     }
 
-    // Build user content
-    let userContent = text;
+    // --- Build the display content (no file content) ---
+    let displayContent = text;
     if (state.attached.length > 0) {
-        state.attached.forEach(f => {
-            userContent += `\n\n📎 ${f.name}:\n\`\`\`\n${f.content}\n\`\`\``;
-        });
+        const fileNames = state.attached.map(f => f.name).join(', ');
+        displayContent += `\n\n📎 Attached: ${fileNames}`;
     }
 
-    state.messages.push({ role: 'user', content: userContent });
-    renderMessages();
+    // --- Store user message (with attachments metadata) ---
+    const userMessage = {
+        role: 'user',
+        text: text,
+        attachments: [...state.attached], // copy current attachments
+        displayContent: displayContent
+    };
+    state.messages.push(userMessage);
 
-    // Clear
+    // Clear input and attachments UI
     if (inp) { inp.value = ''; inp.style.height = ''; }
+    renderMessages();
 
     appendThinkingBubble();
     state.busy = true;
     setBusyState(true);
 
     try {
-        // Choose endpoint based on mode
+        // Build the full content for the API (including file contents)
+        const fullUserContent = buildFullUserContent(text, state.attached);
+        const payload = buildPayloadForApi(fullUserContent);
+
         const endpoint = state.mode === 'pyqa' ? '/pyqa' : '/ask';
-        const payload = buildPayload(userContent);
-        
         const response = await fetch(`${API}${endpoint}`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -490,17 +514,16 @@ async function sendMessage() {
             throw new Error(`Server error ${response.status}: ${err}`);
         }
 
-        const data  = await response.json();
+        const data = await response.json();
         const reply = data.answer || data.response || data.message || 'No response from server.';
 
         state.messages.push({ role: 'assistant', content: reply });
 
         // Persist session
         if (state.currentSessionId && state.sessions.has(state.currentSessionId)) {
-            const sess       = state.sessions.get(state.currentSessionId);
-            sess.messages    = [...state.messages];
-            sess.mode        = state.mode;
-            // Name session after first user message
+            const sess = state.sessions.get(state.currentSessionId);
+            sess.messages = [...state.messages];
+            sess.mode = state.mode;
             if (sess.messages.filter(m => m.role === 'user').length === 1) {
                 sess.name = (text || 'Attachment').slice(0, 36);
             }
@@ -521,14 +544,52 @@ async function sendMessage() {
     }
 }
 
+// Helper: build the full user input string including file contents for the API
+function buildFullUserContent(text, attachments) {
+    let full = text;
+    if (attachments.length > 0) {
+        attachments.forEach(f => {
+            full += `\n\n📎 ${f.name}:\n\`\`\`\n${f.content}\n\`\`\``;
+        });
+    }
+    return full;
+}
+
+// Helper: build the payload for the API using the full user content and conversation history
+function buildPayloadForApi(fullUserContent) {
+    // Reconstruct conversation history (for assistant messages we keep content as is;
+    // for user messages we need to rebuild their full content from stored attachments)
+    const history = state.messages.slice(0, -1).map(msg => {
+        if (msg.role === 'user') {
+            // Rebuild full content for previous user messages
+            const prevText = msg.text || '';
+            const prevAttachments = msg.attachments || [];
+            const prevFull = buildFullUserContent(prevText, prevAttachments);
+            return { role: 'user', content: prevFull };
+        } else {
+            return { role: 'assistant', content: msg.content };
+        }
+    });
+
+    if (state.mode === 'pyqa') {
+        return {
+            messages: history.concat([{ role: 'user', content: fullUserContent }]),
+            question: fullUserContent,
+        };
+    } else {
+        return {
+            question: fullUserContent,
+        };
+    }
+}
+
+
 function buildPayload(userContent) {
-    // Build history for context
     const history = state.messages.slice(0, -1).map(m => ({
         role:    m.role,
         content: m.content,
     }));
 
-    // Different payload structure for different endpoints
     if (state.mode === 'pyqa') {
         return {
             messages: history.concat([{ role: 'user', content: userContent }]),
@@ -600,7 +661,6 @@ function doLogout() {
 function init() {
     loadSessions();
 
-    // Restore mode preference
     const savedMode = localStorage.getItem('pyassist_mode');
     if (savedMode && MODES[savedMode]) {
         setMode(savedMode);
@@ -608,9 +668,8 @@ function init() {
         setMode('pyqa');
     }
 
-        newChat();
+    newChat();
 
-    // File input listener
     const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.addEventListener('change', handleFileUpload);
 
@@ -622,8 +681,8 @@ function init() {
 window.toggleSidebar      = toggleSidebar;
 window.newChat            = newChat;
 window.switchSession      = switchSession;
-window.sendMessage        = sendMessage;
 window.deleteSession      = deleteSession;
+window.sendMessage        = sendMessage;
 window.handleKeyPress     = handleKeyPress;
 window.autoResizeTextarea = autoResizeTextarea;
 window.removeAttachment   = removeAttachment;
