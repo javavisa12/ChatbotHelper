@@ -1,161 +1,121 @@
-"""
-Defines shared constants for audit utilities.
-It centralizes logger and project-root references used by audit modules.
-It is needed to standardize audit path and logging setup.
-"""
+async function sendMessage() {
+    const inp = document.getElementById('chat-input');
+    const text = inp ? inp.value.trim() : '';
 
-from __future__ import annotations
+    if (!text && state.attached.length === 0) return;
+    if (state.busy) return;
+    if (!state.backendUp) {
+        showOfflineWarning();
+        return;
+    }
 
-import logging
+    // --- Build the display content (no file content) ---
+    let displayContent = text;
+    if (state.attached.length > 0) {
+        const fileNames = state.attached.map(f => f.name).join(', ');
+        displayContent += `\n\n📎 Attached: ${fileNames}`;
+    }
 
-logger = logging.getLogger("PBAI.audit")
-"""
-Writes file operation events to system-wide audit JSON files.
-It records upload, delete, and assign actions with timestamp, username, and filename.
-It is needed for compliance traceability of document lifecycle changes.
-"""
+    // --- Store user message (with attachments metadata) ---
+    const userMessage = {
+        role: 'user',
+        text: text,
+        attachments: [...state.attached], // copy current attachments
+        displayContent: displayContent
+    };
+    state.messages.push(userMessage);
 
-from __future__ import annotations
+    // Clear input and attachments UI
+    if (inp) { inp.value = ''; inp.style.height = ''; }
+    renderMessages();
 
-import json
-import logging
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+    appendThinkingBubble();
+    state.busy = true;
+    setBusyState(true);
 
-from common.utils.config import AUDIT_LOG_DIR, FILE_AUDIT_FORMAT
+    try {
+        // Build the full content for the API (including file contents)
+        const fullUserContent = buildFullUserContent(text, state.attached);
+        const payload = buildPayloadForApi(fullUserContent);
 
-logger = logging.getLogger("PBAI.file_audit")
+        const endpoint = state.mode === 'pyqa' ? '/pyqa' : '/ask';
+        const response = await fetch(`${API}${endpoint}`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(payload),
+            signal:  AbortSignal.timeout(60000),
+        });
 
-_TZ_MYT = timezone(timedelta(hours=8))
-
-
-def write_file_audit(username: str, action: str, file: str) -> None:
-    """Append a file operation entry to the system-wide audit log.
-
-    The audit file is rotated by day (``YYYY-MM-DD``) or month (``YYYY-MM``)
-    depending on ``PBAI_FILE_AUDIT_FORMAT``.  When the current-period file
-    already exists the entry is appended; otherwise a new file is created.
-
-    Args:
-        username: Identity of the actor performing the operation.
-        action:   Operation type — ``"upload"``, ``"delete"``, or ``"assign"``.
-        file:     Filename (basename) of the document affected.
-    """
-    try:
-        now = datetime.now(_TZ_MYT)
-        if FILE_AUDIT_FORMAT == "month":
-            period = now.strftime("%Y%m")
-        else:
-            period = now.strftime("%Y%m%d")
-
-        audit_dir = Path(AUDIT_LOG_DIR) / "file_operations"
-        audit_dir.mkdir(parents=True, exist_ok=True)
-
-        audit_file = audit_dir / f"file_audit_{period}.json"
-        entry = {
-            "timestamp": now.isoformat(),
-            "username": username,
-            "action": action,
-            "file": file,
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`Server error ${response.status}: ${err}`);
         }
 
-        if audit_file.exists():
-            with open(audit_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, list):
-                data = []
-            data.append(entry)
-        else:
-            data = [entry]
+        const data = await response.json();
+        const reply = data.answer || data.response || data.message || 'No response from server.';
 
-        with open(audit_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        state.messages.push({ role: 'assistant', content: reply });
 
-    except Exception as exc:
-        logger.error("Failed to write file audit log: %s", exc)
-        """
-Resolves canonical audit directory paths.
-It maps helper codes and usernames to deterministic audit storage locations.
-It is needed to keep audit read and write paths aligned.
-"""
+        // Persist session
+        if (state.currentSessionId && state.sessions.has(state.currentSessionId)) {
+            const sess = state.sessions.get(state.currentSessionId);
+            sess.messages = [...state.messages];
+            sess.mode = state.mode;
+            if (sess.messages.filter(m => m.role === 'user').length === 1) {
+                sess.name = (text || 'Attachment').slice(0, 36);
+            }
+        }
+        persistSessions();
+        state.attached = [];
 
-from __future__ import annotations
+    } catch (err) {
+        console.error('Send error:', err);
+        state.messages.push({ role: 'assistant', content: `⚠️ Error: ${err.message}` });
+    } finally {
+        removeThinkingBubble();
+        state.busy = false;
+        setBusyState(false);
+        renderMessages();
+        renderAttachments();
+        renderSessionList();
+    }
+}
 
-from pathlib import Path
+// Helper: build the full user input string including file contents for the API
+function buildFullUserContent(text, attachments) {
+    let full = text;
+    if (attachments.length > 0) {
+        attachments.forEach(f => {
+            full += `\n\n📎 ${f.name}:\n\`\`\`\n${f.content}\n\`\`\``;
+        });
+    }
+    return full;
+}
 
-from common.utils.config import AUDIT_LOG_DIR
-from common.utils.helpers import HELPER_CODES
+// Helper: build the payload for the API using the full user content and conversation history
+function buildPayloadForApi(fullUserContent) {
+    // Reconstruct conversation history (for assistant messages we keep content as is;
+    // for user messages we need to rebuild their full content from stored attachments)
+    const history = state.messages.slice(0, -1).map(msg => {
+        if (msg.role === 'user') {
+            // Rebuild full content for previous user messages
+            const prevText = msg.text || '';
+            const prevAttachments = msg.attachments || [];
+            const prevFull = buildFullUserContent(prevText, prevAttachments);
+            return { role: 'user', content: prevFull };
+        } else {
+            return { role: 'assistant', content: msg.content };
+        }
+    });
 
-
-def audit_dir_for(helper_code: str, username: str | None = None) -> Path:
-    """Canonical audit log path resolver.
-
-    Single source of truth for audit log directories used by both the write
-    path (writer.py) and the read path (admin_sessions.py).
-
-    Args:
-        helper_code: HELPER_CODES key, e.g. "01" for "policy_helper".
-        username: When supplied, appends the user subdirectory.
-
-    Returns:
-        Resolved Path for the audit log directory.
-    """
-    helper_name = HELPER_CODES.get(helper_code, f"helper-{helper_code}")
-    base = Path(AUDIT_LOG_DIR) / helper_name / "audit_logs"
-    return base / username if username else base
-
-    """
-Writes chat interactions to per-session audit JSON files.
-It appends user and assistant messages with timestamps, sources, and metadata.
-It is needed for traceability and post-session review.
-"""
-
-from __future__ import annotations
-
-import json
-from datetime import datetime, timedelta, timezone
-
-from .constants import logger
-from .resolver import audit_dir_for
-
-
-def write_audit_log(
-    code: str,
-    username: str,
-    session_id: str,
-    question: str,
-    answer: str,
-    sources: list,
-    meta: dict,
-) -> None:
-    log_dir = audit_dir_for(code, username)
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    log_file = log_dir / f"{session_id}.json"
-
-    now = datetime.now(timezone(timedelta(hours=8))).isoformat()
-    user_msg      = {"role": "user",      "content": question, "timestamp": now}
-    assistant_msg = {"role": "assistant", "content": answer.strip(),   "timestamp": now,
-                     "sources": sources,
-                     "meta": {
-                         "confidence":  meta.get("confidence", 0.0),
-                         "search_time": meta.get("search_time"),
-                         "gen_time":    meta.get("gen_time"),
-                         "total_time":  meta.get("total_time"),
-                     }}
-
-    try:
-        if log_file.exists():
-            with open(log_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, dict):
-                data = {"created_at": now, "messages": []}
-            data["messages"].extend([user_msg, assistant_msg])
-        else:
-            data = {"created_at": now, "messages": [user_msg, assistant_msg]}
-
-        with open(log_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-    except Exception as exc:
-        logger.error("Failed to write audit log to %s: %s", log_file, exc)
+    if (state.mode === 'pyqa') {
+        return {
+            messages: history.concat([{ role: 'user', content: fullUserContent }]),
+            question: fullUserContent,
+        };
+    } else {
+        return {
+            question: fullUserContent,
+        };
+    }
+}
