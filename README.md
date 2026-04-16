@@ -1,45 +1,60 @@
 """
-Writes file operation events to audit logs (append-only JSONL).
+Writes chat interactions to per-session audit logs.
 """
 
 import json
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
-from common.utils.config import FILE_AUDIT_DIR, FILE_AUDIT_FORMAT
 from .constants import logger
+from .resolver import audit_dir_for
 
 _TZ_MYT = timezone(timedelta(hours=8))
 
 
-def write_file_audit(username: str, action: str, file: str) -> None:
+def write_audit_log(
+    code: str,
+    username: str,
+    session_id: str,
+    question: str,
+    answer: str,
+) -> None:
     """
-    Append file operation log entry.
-    Uses JSONL format for performance.
+    Append chat messages to a session log file.
     """
-
     try:
-        now = datetime.now(_TZ_MYT)
+        log_dir = audit_dir_for(code, username)
+        log_dir.mkdir(parents=True, exist_ok=True)
 
-        if FILE_AUDIT_FORMAT == "month":
-            period = now.strftime("%Y%m")
-        else:
-            period = now.strftime("%Y%m%d")
+        log_file = log_dir / f"{session_id}.json"
 
-        FILE_AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(_TZ_MYT).isoformat()
 
-        audit_file = FILE_AUDIT_DIR / f"file_audit_{period}.jsonl"
-
-        entry = {
-            "timestamp": now.isoformat(),
-            "username": username,
-            "action": action,
-            "file": file,
+        user_msg = {
+            "role": "user",
+            "content": question,
+            "timestamp": now,
         }
 
-        # Append instead of overwrite
-        with open(audit_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        assistant_msg = {
+            "role": "assistant",
+            "content": answer.strip(),
+            "timestamp": now,
+        }
+
+        # Load existing or create new
+        if log_file.exists():
+            with open(log_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if not isinstance(data, dict):
+                data = {"created_at": now, "messages": []}
+        else:
+            data = {"created_at": now, "messages": []}
+
+        data["messages"].extend([user_msg, assistant_msg])
+
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
     except Exception as exc:
-        logger.error("File audit failed: %s", exc)
+        logger.error("Chat audit failed (%s): %s", session_id, exc)
