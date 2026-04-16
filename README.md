@@ -1,40 +1,89 @@
-import os
+'''AI-related routes for Python Assistant.'''
+
 from flask import Blueprint, request, jsonify, session
+from llm.chat import chat
+from services.project_loader import get_project
+from core.audit.chat_audit import write_audit_log
 
-from core.audit.file_audit import write_file_audit
-from common.utils.config import CHAT_UPLOAD_DIR   # use the dedicated chat upload dir
-
-upload = Blueprint("upload", __name__)
+ai = Blueprint("ai", __name__)
 
 
-@upload.route("/api/upload", methods=["POST"])
-def upload_file():
-    file = request.files.get("file")
+@ai.route("/api/ask", methods=["POST"])
+def ask():
+    '''Ask a question about attached files/project.'''
 
-    if not file:
-        return jsonify({"error": "No file provided"}), 400
+    try:
+        # Get request data safely
+        data = request.get_json() or {}
+        question = data.get("question", "").strip()
+        
+        # Also check for 'message' field (for compatibility)
+        if not question:
+            question = data.get("message", "").strip()
 
-    username = session.get("username", "anonymous")
-    session_id = session.get("session_id")
+        if not question:
+            return jsonify({"error": "No question provided."}), 400
 
-    if not session_id:
-        return jsonify({"error": "No active session"}), 400
+        # Try to get session files, but don't require them
+        session_id = session.get("session_id")
+        code = ""
+        if session_id:
+            code, _ = get_project(session_id)
+        
+        # If files are attached inline in the question, they're already there
+        # Check if the question contains attached file markers
+        has_attachments = "📎" in question or "FILE:" in question
 
-    # Create session-specific subfolder under CHAT_UPLOAD_DIR
-    upload_folder = CHAT_UPLOAD_DIR / session_id
-    upload_folder.mkdir(parents=True, exist_ok=True)
+        # Build prompt based on whether we have code context
+        if code or has_attachments:
+            prompt = f"""
+You are a senior Python engineer.
+Answer based on the attached files.
 
-    # Sanitize filename to prevent path traversal
-    safe_filename = file.filename.replace("/", "_").replace("\\", "_")
-    filepath = upload_folder / safe_filename
+Rules:
+- 1-2 sentence explanation
+- Clean code
+- Code in code block
 
-    file.save(filepath)
+Project/Attached files:
+{code if code else '(Files included inline in the question)'}
 
-    # Audit with full path (optional) or just filename
-    write_file_audit(username, "upload", str(filepath))
+Question:
+{question}
+"""
+        else:
+            prompt = f"""
+You are a senior Python engineer.
+Answer clearly and concisely.
 
-    return jsonify({
-        "message": "File uploaded successfully",
-        "filename": safe_filename,
-        "path": str(filepath)
-    })
+Rules:
+- Short explanation (1-2 sentences)
+- Provide working code
+- Clean code
+
+Question:
+{question}
+"""
+
+        # LLM call
+        result = chat(prompt)
+
+        # These lines were incorrectly indented – fix by adding indentation
+        username = session.get("username", "anonymous")
+        session_id = data.get("session_id") or session.get("session_id")
+
+        write_audit_log(
+            code="01",
+            username=username,
+            session_id=session_id,
+            question=question,
+            answer=result,
+            files=uploaded_files,
+        )
+
+        # Frontend expects 'response' or 'answer'
+        return jsonify({"response": result, "answer": result})
+
+    except Exception as e:
+        print("ERROR in /ask:", e)
+        return jsonify({"error": str(e)}), 500
