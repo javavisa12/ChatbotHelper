@@ -1,117 +1,70 @@
-from flask import Blueprint, jsonify, request, render_template, session
-import uuid
+"""
+Writes chat interactions to per-session audit logs.
+"""
+
+import json
+from datetime import datetime, timedelta, timezone
+
+from .constants import logger
+from .resolver import audit_dir_for
+
+_TZ_MYT = timezone(timedelta(hours=8))
 
 
-from config import DEFAULT_MODEL
-from llm.chat import chat
-from llm.model import health_check
-
-general = Blueprint("general", __name__)
-
-
-SYSTEM_PROMPT = (
-    "You are a senior Python engineer.\n"
-    "Answer clearly and concisely.\n\n"
-    "Rules:\n"
-    "- Short explanation (1-2 sentences)\n"
-    "- Provide working code\n"
-    "- Clean code"
-)
-
-
-@general.route("/")
-def index():
-    return render_template("index.html")
-
-
-# ✅ Status route with session init
-@general.route("/api/status", methods=["GET"])
-def status():
-    if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
-
-    health = health_check()
-
-    return jsonify({
-        "status": "online",
-        "model": DEFAULT_MODEL,
-        "llm_loader": health.get("status"),
-        "pool_total": health.get("pool_total"),
-        "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"],
-        "project_loaded": bool(session.get("project_path")),
-        "project_path": session.get("project_path")
-    })
-
-
-# ✅ Main chat route
-@general.route("/api/pyqa", methods=["POST"])
-def pyqa():
-    data = request.get_json() or {}
-    messages = data.get("messages")
-    question = data.get("question", "").strip()
-    session_id = data.get("session_id")
-
-    if not question and not messages:
-        return jsonify({"error": "Question is empty."}), 400
+def write_audit_log(
+    code: str,
+    username: str,
+    session_id: str,
+    question: str,
+    answer: str,
+    sources: list,
+    meta: dict,
+) -> None:
+    """
+    Append chat messages to a session log file.
+    """
 
     try:
-        # Ensure session
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
+        log_dir = audit_dir_for(code, username)
+        log_dir.mkdir(parents=True, exist_ok=True)
 
-        username = session.get("username", "anonymous")
+        log_file = log_dir / f"{session_id}.json"
 
-        # Prefer frontend session_id
-        session_id = session_id or session["session_id"]
+        now = datetime.now(_TZ_MYT).isoformat()
 
-        if "history" not in session:
-            session["history"] = []
+        user_msg = {
+            "role": "user",
+            "content": question,
+            "timestamp": now,
+        }
 
-        # =========================
-        # CASE 1: Chat messages mode
-        # =========================
-        if messages:
-            messages.insert(0, {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            })
+        assistant_msg = {
+            "role": "assistant",
+            "content": answer.strip(),
+            "timestamp": now,
+            "sources": sources,
+            "meta": {
+                "confidence": meta.get("confidence", 0.0),
+                "search_time": meta.get("search_time"),
+                "gen_time": meta.get("gen_time"),
+                "total_time": meta.get("total_time"),
+            },
+        }
 
-            response = chat(messages)
+        # Load existing or create new
+        if log_file.exists():
+            with open(log_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        # =========================
-        # CASE 2: Simple question mode
-        # =========================
+            if not isinstance(data, dict):
+                data = {"created_at": now, "messages": []}
         else:
-            session["history"].append({
-                "role": "user",
-                "content": question
-            })
+            data = {"created_at": now, "messages": []}
 
-            full_messages = [
-                {"role": "system", "content": SYSTEM_PROMPT}
-            ] + session["history"]
+        data["messages"].extend([user_msg, assistant_msg])
 
-            response = chat(full_messages)
+        with open(log_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
 
-            session["history"].append({
-                "role": "assistant",
-                "content": response
-            })
-
-        # 🔥 AUDIT LOGGING HERE
-        write_audit_log(
-            code="01",
-            username=username,
-            session_id=session_id,
-            question=question,
-            answer=response,
-            sources=[],
-            meta={}
-        )
-
-        return jsonify({"response": response, "answer": response})
-
-    except Exception as e:
-        print("ERROR:", e)
-        return jsonify({"error": str(e)}), 500
+    except Exception as exc:
+        logger.error("Chat audit failed (%s): %s", session_id, exc)
