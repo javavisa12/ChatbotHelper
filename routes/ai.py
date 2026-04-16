@@ -4,7 +4,6 @@ from flask import Blueprint, request, jsonify, session
 from llm.chat import chat
 from services.project_loader import get_project
 from core.audit.chat_audit import write_audit_log
-from core.audit.file_audit import write_file_audit
 
 ai = Blueprint("ai", __name__)
 
@@ -14,28 +13,36 @@ def ask():
     '''Ask a question about attached files/project.'''
 
     try:
-        # Get request data safely
+        # =========================
+        # GET INPUT
+        # =========================
         data = request.get_json() or {}
         question = data.get("question", "").strip()
-        
-        # Also check for 'message' field (for compatibility)
+
         if not question:
             question = data.get("message", "").strip()
 
         if not question:
             return jsonify({"error": "No question provided."}), 400
 
-        # Try to get session files, but don't require them
-        session_id = session.get("session_id")
+        # =========================
+        # SESSION
+        # =========================
+        username = session.get("username", "anonymous")
+        session_id = data.get("session_id") or session.get("session_id")
+
+        # =========================
+        # LOAD PROJECT FILES
+        # =========================
         code = ""
         if session_id:
             code, _ = get_project(session_id)
-        
-        # If files are attached inline in the question, they're already there
-        # Check if the question contains attached file markers
+
         has_attachments = "📎" in question or "FILE:" in question
 
-        # Build prompt based on whether we have code context
+        # =========================
+        # BUILD PROMPT
+        # =========================
         if code or has_attachments:
             prompt = f"""
 You are a senior Python engineer.
@@ -66,24 +73,31 @@ Question:
 {question}
 """
 
-        # LLM call
+        # =========================
+        # LLM CALL
+        # =========================
         result = chat(prompt)
 
-        # These lines were incorrectly indented – fix by adding indentation
-        username = session.get("username", "anonymous")
-        session_id = data.get("session_id") or session.get("session_id")
-
+        # =========================
+        # 🔥 AUDIT LOG (FIXED)
+        # =========================
         write_audit_log(
             code="01",
             username=username,
             session_id=session_id,
             question=question,
             answer=result,
-            file=file,
+            sources=[],   # required
+            meta={}       # required
         )
 
-        # Frontend expects 'response' or 'answer'
-        return jsonify({"response": result, "answer": result})
+        # =========================
+        # RESPONSE
+        # =========================
+        return jsonify({
+            "response": result,
+            "answer": result
+        })
 
     except Exception as e:
         print("ERROR in /ask:", e)
