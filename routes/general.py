@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template, session
 import uuid
+from core.audit.chat_audit import write_audit_log
 
 from config import DEFAULT_MODEL
 from llm.chat import chat
@@ -49,16 +50,21 @@ def pyqa():
     data = request.get_json() or {}
     messages = data.get("messages")
     question = data.get("question", "").strip()
+    session_id = data.get("session_id")
 
     if not question and not messages:
         return jsonify({"error": "Question is empty."}), 400
 
     try:
-        # ✅ Ensure session exists
+        # Ensure session
         if "session_id" not in session:
             session["session_id"] = str(uuid.uuid4())
 
-        # ✅ Initialize chat history if not exists
+        username = session.get("username", "anonymous")
+
+        # Prefer frontend session_id
+        session_id = session_id or session["session_id"]
+
         if "history" not in session:
             session["history"] = []
 
@@ -66,44 +72,44 @@ def pyqa():
         # CASE 1: Chat messages mode
         # =========================
         if messages:
-            # Inject system prompt WITHOUT overwriting user message
             messages.insert(0, {
                 "role": "system",
                 "content": SYSTEM_PROMPT
             })
 
-            print("MESSAGES SENT:", messages)  # Debug
-
             response = chat(messages)
-
-            return jsonify({"response": response})
 
         # =========================
         # CASE 2: Simple question mode
         # =========================
         else:
-            # Store user message
             session["history"].append({
                 "role": "user",
                 "content": question
             })
 
-            # Build full conversation
             full_messages = [
                 {"role": "system", "content": SYSTEM_PROMPT}
             ] + session["history"]
 
-            print("MESSAGES SENT:", full_messages)  # Debug
-
             response = chat(full_messages)
 
-            # Store assistant reply
             session["history"].append({
                 "role": "assistant",
                 "content": response
             })
 
-            return jsonify({"response": response})
+        # 🔥 AUDIT LOGGING HERE
+        write_audit_log(
+            code="01",
+            username=username,
+            session_id=session_id,
+            question=question,
+            answer=response,
+            file=file,
+        )
+
+        return jsonify({"response": response, "answer": response})
 
     except Exception as e:
         print("ERROR:", e)
