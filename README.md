@@ -1,117 +1,103 @@
-from flask import Blueprint, jsonify, request, render_template, session
-import uuid
-from app.audit.chat_audit import write_audit_log
+"""
+App configuration for Python Assistant.
+Includes LLM settings + storage/audit configuration.
+"""
 
-from config import DEFAULT_MODEL
-from llm.chat import chat
-from llm.model import health_check
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-general = Blueprint("general", __name__)
+load_dotenv()
 
+# ============================================================
 
-SYSTEM_PROMPT = (
-    "You are a senior Python engineer.\n"
-    "Answer clearly and concisely.\n\n"
-    "Rules:\n"
-    "- Short explanation (1-2 sentences)\n"
-    "- Provide working code\n"
-    "- Clean code"
-)
+# 🔹 LLM LOADER CONFIG (UNCHANGED)
 
+# ============================================================
 
-@general.route("/")
-def index():
-    return render_template("index.html")
+LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://llm-loader:8501")
+LLM_LOADER_SECRET = os.getenv("LLM_LOADER_SECRET", "")
+LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python-assistant")
 
+# ============================================================
 
-# ✅ Status route with session init
-@general.route("/api/status", methods=["GET"])
-def status():
-    if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
+# 🔹 GENERATION SETTINGS (UNCHANGED)
 
-    health = health_check()
+# ============================================================
 
-    return jsonify({
-        "status": "online",
-        "model": DEFAULT_MODEL,
-        "llm_loader": health.get("status"),
-        "pool_total": health.get("pool_total"),
-        "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"],
-        "project_loaded": bool(session.get("project_path")),
-        "project_path": session.get("project_path")
-    })
+MAX_TOKENS = 512
+TEMP = 0.2
+DEFAULT_MODEL = "qwen"
 
+# ============================================================
 
-# ✅ Main chat route
-@general.route("/api/pyqa", methods=["POST"])
-def pyqa():
-    data = request.get_json() or {}
-    messages = data.get("messages")
-    question = data.get("question", "").strip()
-    session_id = data.get("session_id")
+# 🔹 STORAGE ROOT (NEW)
 
-    if not question and not messages:
-        return jsonify({"error": "Question is empty."}), 400
+# ============================================================
 
-    try:
-        # Ensure session
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
+# Can override with env:
 
-        username = session.get("username", "anonymous")
+# export STORAGE_ROOT=/var/app/storage
 
-        # Prefer frontend session_id
-        session_id = session_id or session["session_id"]
+STORAGE_ROOT = Path(os.getenv("STORAGE_ROOT", "./storage")).resolve()
 
-        if "history" not in session:
-            session["history"] = []
+# ============================================================
 
-        # =========================
-        # CASE 1: Chat messages mode
-        # =========================
-        if messages:
-            messages.insert(0, {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            })
+# 🔹 DIRECTORY STRUCTURE (NEW)
 
-            response = chat(messages)
+# ============================================================
 
-        # =========================
-        # CASE 2: Simple question mode
-        # =========================
-        else:
-            session["history"].append({
-                "role": "user",
-                "content": question
-            })
+# Main folders
 
-            full_messages = [
-                {"role": "system", "content": SYSTEM_PROMPT}
-            ] + session["history"]
+AUDIT_ROOT   = STORAGE_ROOT / "audit"
+UPLOAD_ROOT  = STORAGE_ROOT / "uploads"
+TEMP_ROOT    = STORAGE_ROOT / "temp"
 
-            response = chat(full_messages)
+# Audit subfolders
 
-            session["history"].append({
-                "role": "assistant",
-                "content": response
-            })
+FILE_AUDIT_DIR = AUDIT_ROOT / "file_operations"
+CHAT_AUDIT_DIR = AUDIT_ROOT / "chat_sessions"
 
-        # 🔥 AUDIT LOGGING HERE
-        write_audit_log(
-            code="01",
-            username=username,
-            session_id=session_id,
-            question=question,
-            answer=response,
-            sources=[],
-            meta={}
-        )
+# ============================================================
 
-        return jsonify({"response": response, "answer": response})
+# 🔹 AUDIT SETTINGS (NEW)
 
-    except Exception as e:
-        print("ERROR:", e)
-        return jsonify({"error": str(e)}), 500
+# ============================================================
+
+# "day" → file_audit_20260415.jsonl
+
+# "month" → file_audit_202604.jsonl
+
+FILE_AUDIT_FORMAT = os.getenv("PBAI_FILE_AUDIT_FORMAT", "day")
+
+# ============================================================
+
+# 🔹 AUTO CREATE STORAGE DIRECTORIES (NEW)
+
+# ============================================================
+
+def ensure_storage_dirs():
+#Ensure all required directories exist. Call this once when app starts.
+dirs = [
+STORAGE_ROOT,
+AUDIT_ROOT,
+FILE_AUDIT_DIR,
+CHAT_AUDIT_DIR,
+UPLOAD_ROOT,
+TEMP_ROOT,
+]
+
+```
+for d in dirs:
+    d.mkdir(parents=True, exist_ok=True)
+```
+
+# ============================================================
+
+# 🔹 DEBUG (OPTIONAL)
+
+# ============================================================
+
+if **name** == "**main**":
+ensure_storage_dirs()
+print("✅ Storage initialized at:", STORAGE_ROOT)
