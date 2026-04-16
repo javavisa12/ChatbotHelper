@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from common.utils.config import FILE_AUDIT_DIR, FILE_AUDIT_FORMAT
+from config import FILE_AUDIT_DIR, FILE_AUDIT_FORMAT
 from .constants import logger
 
 _TZ_MYT = timezone(timedelta(hours=8))
