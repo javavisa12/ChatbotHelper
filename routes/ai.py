@@ -3,6 +3,8 @@
 from flask import Blueprint, request, jsonify, session
 from llm.chat import chat
 from services.project_loader import get_project
+from core.audit.chat_audit import write_audit_log
+from core.audit.file_audit import write_file_audit
 
 ai = Blueprint("ai", __name__)
 
@@ -66,6 +68,19 @@ Question:
 
         # LLM call
         result = chat(prompt)
+
+        # These lines were incorrectly indented – fix by adding indentation
+        username = session.get("username", "anonymous")
+        session_id = data.get("session_id") or session.get("session_id")
+
+        write_audit_log(
+            code="01",
+            username=username,
+            session_id=session_id,
+            question=question,
+            answer=result,
+            file=file,
+        )
 
         # Frontend expects 'response' or 'answer'
         return jsonify({"response": result, "answer": result})
