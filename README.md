@@ -1,80 +1,8 @@
-@ai.route("/api/ask", methods=["POST"])
-def ask():
-    '''Ask a question about attached files/project.'''
-
-    try:
-        # Get request data safely
-        data = request.get_json() or {}
-        question = data.get("question", "").strip()
-        
-        # Also check for 'message' field (for compatibility)
-        if not question:
-            question = data.get("message", "").strip()
-
-        if not question:
-            return jsonify({"error": "No question provided."}), 400
-
-        # Try to get session files, but don't require them
-        session_id = session.get("session_id")
-        code = ""
-        if session_id:
-            code, _ = get_project(session_id)
-        
-        # If files are attached inline in the question, they're already there
-        # Check if the question contains attached file markers
-        has_attachments = "📎" in question or "FILE:" in question
-
-        # Build prompt based on whether we have code context
-        if code or has_attachments:
-            prompt = f"""
-You are a senior Python engineer.
-Answer based on the attached files.
-
-Rules:
-- 1-2 sentence explanation
-- Clean code
-- Code in code block
-
-Project/Attached files:
-{code if code else '(Files included inline in the question)'}
-
-Question:
-{question}
-"""
-        else:
-            prompt = f"""
-You are a senior Python engineer.
-Answer clearly and concisely.
-
-Rules:
-- Short explanation (1-2 sentences)
-- Provide working code
-- Clean code
-
-Question:
-{question}
-"""
-
-        # LLM call
-        result = chat(prompt)
-
-        # These lines were incorrectly indented – fix by adding indentation
-        username = session.get("username", "anonymous")
-        session_id = data.get("session_id") or session.get("session_id")
-
-        write_audit_log(
-            code="01",
-            username=username,
-            session_id=session_id,
-            question=question,
-            answer=result,
-            sources=[],
-            meta={}
-        )
-
-        # Frontend expects 'response' or 'answer'
-        return jsonify({"response": result, "answer": result})
-
-    except Exception as e:
-        print("ERROR in /ask:", e)
-        return jsonify({"error": str(e)}), 500
+((PythonAssistance) ) [mia66375@svdwh008 PythonAssistance]$ python app.py
+✅ Connected to llm_loader — pool_total=1, pool_idle=1
+✅ Project loader module initialized
+   Session storage ready for 0 active sessions
+Traceback (most recent call last):
+  File "/pythonITD/PythonAssistance/app.py", line 13, in <module>
+    from routes.upload import upload
+ImportError: cannot import name 'upload' from 'routes.upload' (/pythonITD/PythonAssistance/routes/upload.py)
