@@ -19,11 +19,11 @@ def write_audit_log(
     answer: str,
     sources: list,
     meta: dict,
+    files: list = None,
 ) -> None:
     """
     Append chat messages to a session log file.
     """
-
     try:
         log_dir = audit_dir_for(code, username)
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -36,19 +36,15 @@ def write_audit_log(
             "role": "user",
             "content": question,
             "timestamp": now,
+            "files": files or []
         }
 
         assistant_msg = {
             "role": "assistant",
             "content": answer.strip(),
             "timestamp": now,
-            "sources": sources,
-            "meta": {
-                "confidence": meta.get("confidence", 0.0),
-                "search_time": meta.get("search_time"),
-                "gen_time": meta.get("gen_time"),
-                "total_time": meta.get("total_time"),
-            },
+            "sources" : sources,
+            "meta": {},
         }
 
         # Load existing or create new
