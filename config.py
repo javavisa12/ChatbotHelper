@@ -63,24 +63,20 @@ FILE_AUDIT_FORMAT = os.getenv("PBAI_FILE_AUDIT_FORMAT", "day")
 # ============================================================
 
 def ensure_storage_dirs():
-"""
-Ensure all required directories exist.
-Call this once when app starts.
-"""
-dirs = [
-STORAGE_ROOT,
-AUDIT_ROOT,
-FILE_AUDIT_DIR,
-CHAT_AUDIT_DIR,
-CHAT_UPLOAD_DIR,
-UPLOAD_ROOT,
-TEMP_ROOT,
+   
+ dirs = [
+  STORAGE_ROOT,
+  AUDIT_ROOT,
+  FILE_AUDIT_DIR,
+  CHAT_AUDIT_DIR,
+  CHAT_UPLOAD_DIR,
+  UPLOAD_ROOT,
+  TEMP_ROOT,
 ]
 
-```
-for d in dirs:
+ for d in dirs:
     d.mkdir(parents=True, exist_ok=True)
-```
+
 
 # ============================================================
 
@@ -88,6 +84,6 @@ for d in dirs:
 
 # ============================================================
 
-if **name** == "**main**":
-ensure_storage_dirs()
+if __name__ == "__main__":
+ ensure_storage_dirs()
 print("✅ Storage initialized at:", STORAGE_ROOT)
