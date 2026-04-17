@@ -1,117 +1,104 @@
-from flask import Blueprint, jsonify, request, render_template, session
-import uuid
-from core.audit.chat_audit import write_audit_log
-from core.audit.session_utils import generate_session_id
-from config import DEFAULT_MODEL
+'''AI-related routes for Python Assistant.'''
+
+from flask import Blueprint, request, jsonify, session
 from llm.chat import chat
-from llm.model import health_check
+from services.project_loader import get_project
+from core.audit.chat_audit import write_audit_log
 
-general = Blueprint("general", __name__)
-
-
-SYSTEM_PROMPT = (
-    "You are a senior Python engineer.\n"
-    "Answer clearly and concisely.\n\n"
-    "Rules:\n"
-    "- Short explanation (1-2 sentences)\n"
-    "- Provide working code\n"
-    "- Clean code"
-)
+ai = Blueprint("ai", __name__)
 
 
-@general.route("/")
-def index():
-    return render_template("index.html")
-
-
-# ✅ Status route with session init
-@general.route("/api/status", methods=["GET"])
-def status():
-    if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
-
-    health = health_check()
-
-    return jsonify({
-        "status": "online",
-        "model": DEFAULT_MODEL,
-        "llm_loader": health.get("status"),
-        "pool_total": health.get("pool_total"),
-        "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"],
-        "project_loaded": bool(session.get("project_path")),
-        "project_path": session.get("project_path")
-    })
-
-
-# ✅ Main chat route
-@general.route("/api/pyqa", methods=["POST"])
-def pyqa():
-    data = request.get_json() or {}
-    messages = data.get("messages")
-    question = data.get("question", "").strip()
-    session_id = data.get("session_id")
-
-    if not question and not messages:
-        return jsonify({"error": "Question is empty."}), 400
+@ai.route("/api/ask", methods=["POST"])
+def ask():
+    '''Ask a question about attached files/project.'''
 
     try:
-        # Ensure session
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
+        # =========================
+        # GET INPUT
+        # =========================
+        data = request.get_json() or {}
+        question = data.get("question", "").strip()
 
+        if not question:
+            question = data.get("message", "").strip()
+
+        if not question:
+            return jsonify({"error": "No question provided."}), 400
+
+        # =========================
+        # SESSION
+        # =========================
         username = session.get("username", "anonymous")
-
-        # Prefer frontend session_id
-        session_id = session_id or session["session_id"]
-
-        if "history" not in session:
-            session["history"] = []
+        session_id = data.get("session_id") or session.get("session_id")
 
         # =========================
-        # CASE 1: Chat messages mode
+        # LOAD PROJECT FILES
         # =========================
-        if messages:
-            messages.insert(0, {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            })
+        code = ""
+        if session_id:
+            code, _ = get_project(session_id)
 
-            response = chat(messages)
+        has_attachments = "📎" in question or "FILE:" in question
 
         # =========================
-        # CASE 2: Simple question mode
+        # BUILD PROMPT
         # =========================
+        if code or has_attachments:
+            prompt = f"""
+You are a senior Python engineer.
+Answer based on the attached files.
+
+Rules:
+- 1-2 sentence explanation
+- Clean code
+- Code in code block
+
+Project/Attached files:
+{code if code else '(Files included inline in the question)'}
+
+Question:
+{question}
+"""
         else:
-            session["history"].append({
-                "role": "user",
-                "content": question
-            })
+            prompt = f"""
+You are a senior Python engineer.
+Answer clearly and concisely.
 
-            full_messages = [
-                {"role": "system", "content": SYSTEM_PROMPT}
-            ] + session["history"]
+Rules:
+- Short explanation (1-2 sentences)
+- Provide working code
+- Clean code
 
-            response = chat(full_messages)
+Question:
+{question}
+"""
 
-            session["history"].append({
-                "role": "assistant",
-                "content": response
-            })
+        # =========================
+        # LLM CALL
+        # =========================
+        result = chat(prompt)
 
-        # 🔥 AUDIT LOGGING HERE
+        # =========================
+        # 🔥 AUDIT LOG (FIXED)
+        # =========================
         write_audit_log(
             code="01",
             username=username,
             session_id=session_id,
             question=question,
-            answer=response,
-            sources = [],
-            meta={}
+            answer=result,
+            sources=[],   # required
+            meta={}       # required
         )
 
-        return jsonify({"response": response, "answer": response})
+        # =========================
+        # RESPONSE
+        # =========================
+        return jsonify({
+            "response": result,
+            "answer": result
+        })
 
     except Exception as e:
-        print("ERROR:", e)
+        print("ERROR in /ask:", e)
         return jsonify({"error": str(e)}), 500
