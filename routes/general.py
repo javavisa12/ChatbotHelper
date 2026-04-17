@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template, session
-import uuid
 from core.audit.chat_audit import write_audit_log
-
+from core.audit.session_utils import generate_session_id
 from config import DEFAULT_MODEL
 from llm.chat import chat
 from llm.model import health_check
@@ -24,11 +23,11 @@ def index():
     return render_template("index.html")
 
 
-# ✅ Status route with session init
+# ✅ Status route (NO UUID)
 @general.route("/api/status", methods=["GET"])
 def status():
     if "session_id" not in session:
-        session["session_id"] = str(uuid.uuid4())
+        session["session_id"] = None
 
     health = health_check()
 
@@ -38,7 +37,7 @@ def status():
         "llm_loader": health.get("status"),
         "pool_total": health.get("pool_total"),
         "pool_idle": health.get("pool_idle"),
-        "session_id": session["session_id"],
+        "session_id": session.get("session_id"),
         "project_loaded": bool(session.get("project_path")),
         "project_path": session.get("project_path")
     })
@@ -50,21 +49,24 @@ def pyqa():
     data = request.get_json() or {}
     messages = data.get("messages")
     question = data.get("question", "").strip()
-    session_id = data.get("session_id")
 
     if not question and not messages:
         return jsonify({"error": "Question is empty."}), 400
 
     try:
-        # Ensure session
-        if "session_id" not in session:
-            session["session_id"] = str(uuid.uuid4())
-
         username = session.get("username", "anonymous")
 
-        # Prefer frontend session_id
-        session_id = session_id or session["session_id"]
+        # =========================
+        # SESSION (Option 2 logic)
+        # =========================
+        if not session.get("session_id"):
+            session["session_id"] = generate_session_id(question or "chat")
 
+        session_id = session["session_id"]
+
+        # =========================
+        # HISTORY INIT
+        # =========================
         if "history" not in session:
             session["history"] = []
 
@@ -76,7 +78,6 @@ def pyqa():
                 "role": "system",
                 "content": SYSTEM_PROMPT
             })
-
             response = chat(messages)
 
         # =========================
@@ -99,14 +100,17 @@ def pyqa():
                 "content": response
             })
 
-        # 🔥 AUDIT LOGGING HERE
+        # =========================
+        # 🔥 AUDIT LOG
+        # =========================
         write_audit_log(
             code="01",
             username=username,
             session_id=session_id,
             question=question,
             answer=response,
-            file=file,
+            sources=[],
+            meta={}
         )
 
         return jsonify({"response": response, "answer": response})
