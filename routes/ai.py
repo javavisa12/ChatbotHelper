@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, session
 from llm.chat import chat
 from services.project_loader import get_project
 from core.audit.chat_audit import write_audit_log
+from core.audit.session_utils import generate_session_id
 
 ai = Blueprint("ai", __name__)
 
@@ -14,7 +15,7 @@ def ask():
 
     try:
         # =========================
-        # GET INPUT
+        # INPUT
         # =========================
         data = request.get_json() or {}
         question = data.get("question", "").strip()
@@ -25,11 +26,15 @@ def ask():
         if not question:
             return jsonify({"error": "No question provided."}), 400
 
-        # =========================
-        # SESSION
-        # =========================
         username = session.get("username", "anonymous")
-        session_id = data.get("session_id") or session.get("session_id")
+
+        # =========================
+        # SESSION (Option 2 logic)
+        # =========================
+        if not session.get("session_id"):
+            session["session_id"] = generate_session_id(question or "chat")
+
+        session_id = session["session_id"]
 
         # =========================
         # LOAD PROJECT FILES
@@ -41,7 +46,7 @@ def ask():
         has_attachments = "📎" in question or "FILE:" in question
 
         # =========================
-        # BUILD PROMPT
+        # PROMPT
         # =========================
         if code or has_attachments:
             prompt = f"""
@@ -74,12 +79,12 @@ Question:
 """
 
         # =========================
-        # LLM CALL
+        # LLM
         # =========================
         result = chat(prompt)
 
         # =========================
-        # 🔥 AUDIT LOG (FIXED)
+        # 🔥 AUDIT LOG
         # =========================
         write_audit_log(
             code="01",
@@ -87,8 +92,8 @@ Question:
             session_id=session_id,
             question=question,
             answer=result,
-            sources=[],   # required
-            meta={}       # required
+            sources=[],
+            meta={}
         )
 
         # =========================
