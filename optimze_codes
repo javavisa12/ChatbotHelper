@@ -1,0 +1,117 @@
+
+#non-optimized loop
+numbers = range(1, 1001)
+result = {}
+for n in numbers:
+    if n % 2 == 0:
+        squared = n * n
+        result[n] = squared
+
+total = 0
+keys = list(result.keys())
+for k in keys:
+    total = total + result[k]
+
+print("Total:", total)
+print("Count:", len(result))
+
+
+
+
+
+
+#optimized loop
+numbers = range(1, 1001)
+result = {n: n * n
+          for n in numbers
+          if n % 2 == 0}
+
+total = sum(result.values())
+
+print("Total:", total)
+print("Count:", len(result))
+
+
+
+
+
+
+#non-optimized caching
+
+def get_user_emails(user_ids):
+    emails = []
+    for uid in user_ids:
+        # Hit DB every iteration
+        user = db.query(
+          "SELECT email FROM users"
+          " WHERE id = ?", uid
+        )
+        emails.append(user.email)
+    return emails
+
+# 1000 IDs = 1000 round trips
+ids = list(range(1, 1001))
+result = get_user_emails(ids)
+
+
+
+#optimized caching
+
+def get_user_emails(user_ids):
+    if not user_ids:
+        return []
+    # Single query with IN clause
+    placeholders = ",".join(
+        "?" * len(user_ids)
+    )
+    rows = db.query(
+        f"SELECT id, email FROM users"
+        f" WHERE id IN ({placeholders})",
+        *user_ids
+    )
+    lookup = {r.id: r.email for r in rows}
+    return [lookup[i] for i in user_ids]
+
+ids = list(range(1, 1001))
+result = get_user_emails(ids)
+
+
+
+
+
+#non-optimized string concat
+
+items = ["apple", "banana", "cherry",
+         "date", "elderberry"]
+html = "
+"
+for item in items:
+    html = html + "
+"
+    html = html + item.upper()
+    html = html + " (fruit)"
+    html = html + "
+"
+html = html + "
+"
+print(html)
+
+
+
+
+
+
+#optimized string concat 
+
+items = ["apple", "banana", "cherry",
+         "date", "elderberry"]
+rows = (f"
+{i.upper()} (fruit)
+"
+        for i in items)
+html = "
+" + "".join(rows) + "
+"
+print(html)
+
+
