@@ -17,7 +17,7 @@ load_dotenv()
 
 LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://llm-loader:8501")
 LLM_LOADER_SECRET = os.getenv("LLM_LOADER_SECRET", "")
-LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python-assistant")
+LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python_assistant")
 
 MAX_TOKENS = 512
 TEMP = 0.2
