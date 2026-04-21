@@ -257,14 +257,13 @@ header .brand {
     font-weight: 500;
 }
 
-/* Wrapper to keep the text truncating properly */
 .session-item-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
 }
-/* Delete button styles */
+
 .delete-session-btn {
     background: transparent;
     border: none;
@@ -273,7 +272,7 @@ header .brand {
     cursor: pointer;
     padding: 4px;
     border-radius: 4px;
-    opacity: 0; /* Hidden until hovered */
+    opacity: 0;
     transition: opacity 0.2s, background 0.2s, color 0.2s;
     display: flex;
     align-items: center;
@@ -281,14 +280,11 @@ header .brand {
     line-height: 1;
     flex-shrink: 0;
 }
-.session-item:hover .delete-session-btn {
-    opacity: 1;
-}
+.session-item:hover .delete-session-btn { opacity: 1; }
 .delete-session-btn:hover {
     background: rgba(243, 14, 25, 0.1);
     color: var(--primary);
 }
-
 
 .sidebar-empty {
     padding: 16px 14px;
@@ -380,7 +376,7 @@ header .brand {
     margin-top: 6px;
 }
 
-/* ── Message Timestamps ───────────────────────────────────── */
+/* ── Bubble wrapper ───────────────────────────────────────── */
 .bubble-wrapper {
     display: flex;
     flex-direction: column;
@@ -388,24 +384,58 @@ header .brand {
     max-width: 100%;
 }
 
+/* ── Message footer: copy btn + timestamp + duration ─────── */
 .msg-footer {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.8;
-    padding: 0 4px;
+    min-height: 22px;
 }
 
+/* User messages: align footer to the right */
 .message.user .msg-footer {
     justify-content: flex-end;
 }
 
-/* Adjust copy button since it is now inside the flex footer */
-.msg-footer .copy-btn {
-    margin-top: 0; 
+/* ── Timestamp ────────────────────────────────────────────── */
+.msg-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.75;
+    white-space: nowrap;
 }
+
+/* ── Duration badge ───────────────────────────────────────── */
+.msg-duration {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    border-radius: var(--radius-pill);
+    padding: 1px 7px;
+    white-space: nowrap;
+}
+
+/* ── Copy button — now lives inside .msg-footer ──────────── */
+.copy-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.4;
+}
+.copy-btn:hover { background: var(--hover); color: var(--text); }
+/* Show copy button when hovering the whole message */
+.message.assistant:hover .copy-btn { display: inline-block; }
 
 /* code blocks inside bubbles */
 .bubble code {
@@ -464,20 +494,13 @@ header .brand {
     font-family: inherit;
     line-height: 1;
 }
-
 .code-btn:hover {
     background: #3a4255;
     border-color: #5a6378;
     color: #f3f4f6;
 }
-
-.code-btn svg {
-    flex-shrink: 0;
-}
-
-.code-btn span {
-    font-size: 11px;
-}
+.code-btn svg { flex-shrink: 0; }
+.code-btn span { font-size: 11px; }
 
 .code-block-wrapper pre {
     margin: 0 !important;
@@ -512,22 +535,6 @@ header .brand {
     padding: 0;
     font-size: inherit;
 }
-
-/* copy button */
-.copy-btn {
-    display: none;
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 2px 8px;
-    cursor: pointer;
-    margin-top: 4px;
-    font-family: inherit;
-}
-.copy-btn:hover { background: var(--hover); color: var(--text); }
-.message.assistant:hover .copy-btn { display: inline-block; }
 
 /* status / typing indicator */
 .status-indicator {
