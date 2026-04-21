@@ -420,9 +420,9 @@ header .brand {
     white-space: nowrap;
 }
 
-/* ── Copy button — now lives inside .msg-footer ──────────── */
+/* ── Copy button — always visible on hover ──────────────── */
 .copy-btn {
-    display: none;
+    display: inline-block;
     background: none;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -432,12 +432,13 @@ header .brand {
     cursor: pointer;
     font-family: inherit;
     line-height: 1.4;
+    opacity: 0;
+    transition: opacity var(--transition-normal), background var(--transition-normal), color var(--transition-normal);
 }
-.copy-btn:hover { background: var(--hover); color: var(--text); }
-/* Show copy button when hovering the whole message */
-.message.assistant:hover .copy-btn,
-.message.user:hover .copy-btn { display: inline-block; }
-/* On user messages the footer is right-aligned and bg is red, so invert the button */
+/* Reveal on message hover */
+.message:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { background: var(--hover); color: var(--text); opacity: 1; }
+/* On user messages invert to suit the red bubble */
 .message.user .copy-btn {
     border-color: rgba(255,255,255,.45);
     color: rgba(255,255,255,.85);
