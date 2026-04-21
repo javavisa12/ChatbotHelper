@@ -248,10 +248,11 @@ function renderMessages() {
                 attachmentsHtml = `<div class="user-attachments">${chips}</div>`;
             }
 
-            // User footer: just timestamp
-            const footerHtml = msg.timestamp
-                ? `<div class="msg-footer"><span class="msg-time">${esc(msg.timestamp)}</span></div>`
-                : '';
+            // User footer: copy btn + timestamp
+            const footerHtml = `<div class="msg-footer">
+                       <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
+                       ${msg.timestamp ? `<span class="msg-time">${esc(msg.timestamp)}</span>` : ''}
+                   </div>`;
 
             html += `
                 <div class="${cls}">
@@ -421,12 +422,21 @@ function removeThinkingBubble() {
 function copyBubble(btn) {
     const wrapper = btn.closest('.bubble-wrapper');
     const bubble = wrapper.querySelector('.bubble');
-    if (!bubble) return;
-    
-    const clone = bubble.cloneNode(true);
-    clone.querySelectorAll('.code-block-header, .code-btn').forEach(el => el.remove());
-    
-    navigator.clipboard.writeText(clone.innerText || clone.textContent).then(() => {
+
+    let textToCopy = '';
+    if (bubble) {
+        const clone = bubble.cloneNode(true);
+        clone.querySelectorAll('.code-block-header, .code-btn').forEach(el => el.remove());
+        textToCopy = clone.innerText || clone.textContent;
+    } else {
+        // Attachment-only user message: copy file names from chips
+        const chips = wrapper.querySelectorAll('.file-chip');
+        textToCopy = Array.from(chips).map(c => c.textContent.trim()).join('\n');
+    }
+
+    if (!textToCopy.trim()) return;
+
+    navigator.clipboard.writeText(textToCopy.trim()).then(() => {
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = originalText; }, 1500);
