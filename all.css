@@ -420,7 +420,7 @@ header .brand {
     white-space: nowrap;
 }
 
-/* ── Copy button — always visible on hover ──────────────── */
+/* ── Copy button ─────────────────────────────────────────── */
 .copy-btn {
     display: inline-block;
     background: none;
@@ -432,21 +432,20 @@ header .brand {
     cursor: pointer;
     font-family: inherit;
     line-height: 1.4;
-    opacity: 0;
-    transition: opacity var(--transition-normal), background var(--transition-normal), color var(--transition-normal);
 }
-/* Reveal on message hover */
-.message:hover .copy-btn { opacity: 1; }
-.copy-btn:hover { background: var(--hover); color: var(--text); opacity: 1; }
-/* On user messages invert to suit the red bubble */
+.copy-btn:hover {
+    background: var(--hover);
+    color: var(--text);
+}
+/* User bubble: white-tinted so button is visible on red */
 .message.user .copy-btn {
-    border-color: rgba(255,255,255,.45);
-    color: rgba(255,255,255,.85);
+    border-color: rgba(255,255,255,.6);
+    color: rgba(255,255,255,.9);
 }
 .message.user .copy-btn:hover {
-    background: rgba(255,255,255,.18);
+    background: rgba(255,255,255,.2);
     color: #fff;
-    border-color: rgba(255,255,255,.7);
+    border-color: #fff;
 }
 
 /* code blocks inside bubbles */
