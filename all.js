@@ -48,6 +48,15 @@ function nowTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function nowTimestamp() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatDuration(ms) {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+}
+
 function autoResizeTextarea(el) {
     if (!el) return;
     el.style.height = 'auto';
@@ -59,12 +68,10 @@ function setMode(modeKey) {
     if (!MODES[modeKey]) return;
     state.mode = modeKey;
 
-    // Toggle active class on header buttons
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById('mode-btn-' + modeKey);
     if (activeBtn) activeBtn.classList.add('active');
 
-    // Update mode banner
     const cfg = MODES[modeKey];
     const bannerIcon  = document.getElementById('mode-banner-icon');
     const bannerLabel = document.getElementById('mode-banner-label');
@@ -73,7 +80,6 @@ function setMode(modeKey) {
     if (bannerLabel) bannerLabel.textContent = cfg.badge;
     if (bannerDesc)  bannerDesc.textContent  = '— ' + cfg.desc;
 
-    // Update textarea placeholder
     const inp = document.getElementById('chat-input');
     if (inp) inp.placeholder = cfg.placeholder;
 
@@ -181,16 +187,12 @@ function loadSessions() {
         const data = JSON.parse(raw);
         state.sessions.clear();
         for (const item of data) {
-            // Migrate old user messages to the new structure
             const migratedMessages = (item.messages || []).map(msg => {
                 if (msg.role === 'user' && msg.content && !msg.displayContent) {
-                    // Old format: content contains text + file content
-                    // We cannot recover the original text easily, but we can strip code blocks
-                    // for display. Simpler: show a generic "[previous attachment]"
                     let display = msg.content.replace(/```[\s\S]*?```/g, '[file content hidden]');
                     return {
                         role: 'user',
-                        text: msg.content.split('\n')[0], // first line as approximate text
+                        text: msg.content.split('\n')[0],
                         attachments: [],
                         displayContent: display
                     };
@@ -231,16 +233,13 @@ function renderMessages() {
         const avatar = isUser ? 'You' : 'PyAI';
 
         if (isUser) {
-            // --- User message: separate bubble (text) + attachments below ---
-            const userText = msg.text || '';           // typed message
-            const attachments = msg.attachments || []; // array of { name, content }
+            const userText = msg.text || '';
+            const attachments = msg.attachments || [];
 
-            // Bubble: only show if there is text
             const bubbleHtml = userText.trim() 
                 ? `<div class="bubble">${esc(userText)}</div>` 
                 : '';
 
-            // Attachments list (if any)
             let attachmentsHtml = '';
             if (attachments.length > 0) {
                 const chips = attachments.map(att => 
@@ -249,23 +248,44 @@ function renderMessages() {
                 attachmentsHtml = `<div class="user-attachments">${chips}</div>`;
             }
 
+            // User footer: just timestamp
+            const footerHtml = msg.timestamp
+                ? `<div class="msg-footer"><span class="msg-time">${esc(msg.timestamp)}</span></div>`
+                : '';
+
             html += `
                 <div class="${cls}">
                     <div class="avatar">${avatar}</div>
                     <div class="bubble-wrapper">
                         ${bubbleHtml}
                         ${attachmentsHtml}
+                        ${footerHtml}
                     </div>
                 </div>`;
         } else {
-            // Assistant message: unchanged, uses formatBubble for code blocks
             const contentHtml = formatBubble(msg.content, false);
+
+            // Assistant footer: copy btn + timestamp + duration badge
+            const durationHtml = msg.duration != null
+                ? `<span class="msg-duration">⚡ ${formatDuration(msg.duration)}</span>`
+                : '';
+            const timeHtml = msg.timestamp
+                ? `<span class="msg-time">${esc(msg.timestamp)}</span>`
+                : '';
+            const footerHtml = (timeHtml || durationHtml)
+                ? `<div class="msg-footer">
+                       <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
+                       ${timeHtml}
+                       ${durationHtml}
+                   </div>`
+                : `<div class="msg-footer"><button class="copy-btn" onclick="copyBubble(this)">Copy</button></div>`;
+
             html += `
                 <div class="${cls}">
                     <div class="avatar">${avatar}</div>
                     <div class="bubble-wrapper">
                         <div class="bubble">${contentHtml}</div>
-                        <button class="copy-btn" onclick="copyBubble(this)">Copy</button>
+                        ${footerHtml}
                     </div>
                 </div>`;
         }
@@ -274,8 +294,6 @@ function renderMessages() {
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
 }
-
-
 
 /**
  * Enhanced formatter: wrap ```...``` blocks with copy/download buttons
@@ -337,9 +355,7 @@ function copyCodeBlock(blockId) {
             const span = btn.querySelector('span');
             const originalText = span.textContent;
             span.textContent = 'Copied!';
-            setTimeout(() => {
-                span.textContent = originalText;
-            }, 1500);
+            setTimeout(() => { span.textContent = originalText; }, 1500);
         }
     }).catch(err => console.error('Failed to copy:', err));
 }
@@ -472,23 +488,22 @@ async function sendMessage() {
         return;
     }
 
-    // --- Build the display content (no file content) ---
     let displayContent = text;
     if (state.attached.length > 0) {
         const fileNames = state.attached.map(f => f.name).join(', ');
         displayContent += `\n\n📎 Attached: ${fileNames}`;
     }
 
-    // --- Store user message (with attachments metadata) ---
+    // Store user message with timestamp
     const userMessage = {
         role: 'user',
         text: text,
-        attachments: [...state.attached], // copy current attachments
-        displayContent: displayContent
+        attachments: [...state.attached],
+        displayContent: displayContent,
+        timestamp: nowTimestamp(),
     };
     state.messages.push(userMessage);
 
-    // Clear input and attachments UI
     if (inp) { inp.value = ''; inp.style.height = ''; }
     renderMessages();
 
@@ -496,8 +511,9 @@ async function sendMessage() {
     state.busy = true;
     setBusyState(true);
 
+    const requestStart = Date.now();
+
     try {
-        // Build the full content for the API (including file contents)
         const fullUserContent = buildFullUserContent(text, state.attached);
         const payload = buildPayloadForApi(fullUserContent);
 
@@ -516,10 +532,15 @@ async function sendMessage() {
 
         const data = await response.json();
         const reply = data.answer || data.response || data.message || 'No response from server.';
+        const elapsed = Date.now() - requestStart;
 
-        state.messages.push({ role: 'assistant', content: reply });
+        state.messages.push({
+            role: 'assistant',
+            content: reply,
+            timestamp: nowTimestamp(),
+            duration: elapsed,
+        });
 
-        // Persist session
         if (state.currentSessionId && state.sessions.has(state.currentSessionId)) {
             const sess = state.sessions.get(state.currentSessionId);
             sess.messages = [...state.messages];
@@ -533,7 +554,13 @@ async function sendMessage() {
 
     } catch (err) {
         console.error('Send error:', err);
-        state.messages.push({ role: 'assistant', content: `⚠️ Error: ${err.message}` });
+        const elapsed = Date.now() - requestStart;
+        state.messages.push({
+            role: 'assistant',
+            content: `⚠️ Error: ${err.message}`,
+            timestamp: nowTimestamp(),
+            duration: elapsed,
+        });
     } finally {
         removeThinkingBubble();
         state.busy = false;
@@ -544,7 +571,6 @@ async function sendMessage() {
     }
 }
 
-// Helper: build the full user input string including file contents for the API
 function buildFullUserContent(text, attachments) {
     let full = text;
     if (attachments.length > 0) {
@@ -555,13 +581,9 @@ function buildFullUserContent(text, attachments) {
     return full;
 }
 
-// Helper: build the payload for the API using the full user content and conversation history
 function buildPayloadForApi(fullUserContent) {
-    // Reconstruct conversation history (for assistant messages we keep content as is;
-    // for user messages we need to rebuild their full content from stored attachments)
     const history = state.messages.slice(0, -1).map(msg => {
         if (msg.role === 'user') {
-            // Rebuild full content for previous user messages
             const prevText = msg.text || '';
             const prevAttachments = msg.attachments || [];
             const prevFull = buildFullUserContent(prevText, prevAttachments);
@@ -582,7 +604,6 @@ function buildPayloadForApi(fullUserContent) {
         };
     }
 }
-
 
 function buildPayload(userContent) {
     const history = state.messages.slice(0, -1).map(m => ({
