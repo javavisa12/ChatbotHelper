@@ -435,7 +435,18 @@ header .brand {
 }
 .copy-btn:hover { background: var(--hover); color: var(--text); }
 /* Show copy button when hovering the whole message */
-.message.assistant:hover .copy-btn { display: inline-block; }
+.message.assistant:hover .copy-btn,
+.message.user:hover .copy-btn { display: inline-block; }
+/* On user messages the footer is right-aligned and bg is red, so invert the button */
+.message.user .copy-btn {
+    border-color: rgba(255,255,255,.45);
+    color: rgba(255,255,255,.85);
+}
+.message.user .copy-btn:hover {
+    background: rgba(255,255,255,.18);
+    color: #fff;
+    border-color: rgba(255,255,255,.7);
+}
 
 /* code blocks inside bubbles */
 .bubble code {
