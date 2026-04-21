@@ -439,13 +439,13 @@ header .brand {
 }
 /* User bubble: white-tinted so button is visible on red */
 .message.user .copy-btn {
-    border-color: rgba(255,255,255,.6);
-    color: rgba(255,255,255,.9);
+    border-color: var(--text-muted);
+    color: var(--text-muted);
 }
 .message.user .copy-btn:hover {
-    background: rgba(255,255,255,.2);
-    color: #fff;
-    border-color: #fff;
+    background: var(--hover);
+    color: var(--text);
+    border-color: var(--text-muted);
 }
 
 /* code blocks inside bubbles */
