@@ -325,10 +325,10 @@ header .brand {
     padding: 24px 20px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 8px;
 }
 
-.message { display: flex; gap: 10px; max-width: 820px; }
+.message { display: flex; gap: 8px; max-width: 820px; }
 .message.user      { align-self: flex-end;   flex-direction: row-reverse; }
 .message.assistant { align-self: flex-start; }
 
@@ -342,9 +342,11 @@ header .brand {
     font-size: 11px;
     font-weight: 700;
     flex-shrink: 0;
-    margin-top: 2px;
+    margin-top: 0px;
+    align-self: flex-start;
 }
-.message.user      .avatar { background: var(--primary); color: #fff; }
+
+.message.user      .avatar { background: var(--primary); color: #fff;}
 .message.assistant .avatar { background: var(--avatar-ai); color: #444; }
 
 .bubble {
@@ -380,7 +382,7 @@ header .brand {
 .bubble-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     max-width: 100%;
 }
 
@@ -389,7 +391,8 @@ header .brand {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 22px;
+    min-height: unset;
+    gap: 6px;
 }
 
 /* User messages: align footer to the right */
