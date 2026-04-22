@@ -38,7 +38,7 @@ You are a highly skilled Python engineer.<|im_end|>
                 "stream":      False,
                 "helper_id":   LLM_HELPER_ID,
             },
-            timeout=60,
+            timeout=180,
         )
         response.raise_for_status()
         return response.json().get("text", "Error: empty response")
