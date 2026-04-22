@@ -1,5 +1,5 @@
 /* ============================================================
-   PyAssist — style.css  (matches PBAI design system)
+   PyAssist — style.css 
    ============================================================ */
 
 /* ── Design tokens ────────────────────────────────────────── */
@@ -383,7 +383,26 @@ header .brand {
     display: flex;
     flex-direction: column;
     gap: 2px;
+    width: fit-content;
     max-width: 100%;
+    align-items: flex-start;
+}
+
+.message.user .bubble-wrapper {
+    align-items: flex-end;
+}
+
+.message.assistant {
+    gap: 6px;
+}
+
+.message.assistant .bubble {
+    padding-left: 12px;
+    padding-right: 13px;
+}
+
+.copy-btn {
+    align-self: flex-start;
 }
 
 /* ── Message footer: copy btn + timestamp + duration ─────── */
