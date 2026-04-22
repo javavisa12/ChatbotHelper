@@ -73,6 +73,7 @@ Rules:
 - Short explanation (1-2 sentences)
 - Provide working code
 - Clean code
+- If asked to explain code , insert short explanation as comments above the code line , inside the code block
 
 Question:
 {question}
