@@ -1,108 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyAssist - Python Assistant</title>
-    <link rel="stylesheet" href="/static/css/all.css">
-</head>
-<body>
+/* ── Messages ─────────────────────────────────────────────── */
+#messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px; /* tighter spacing */
+}
 
-<header>
-    <div class="brand">
-        <button id="toggle-sidebar" type="button" onclick="toggleSidebar()" title="Toggle chat history" aria-label="Toggle chat history">&#9776;</button>
-        <a class="back-link">PyAssist</a>
-    </div>
+/* Message layout */
+.message {
+    display: flex;
+    gap: 6px;
+    max-width: 820px;
+    align-items: flex-end; /* KEY FIX */
+}
 
-    <div class="header-center">
-        <div class="mode-toggle" role="group" aria-label="Assistant mode">
-            <button type="button" class="mode-btn active" id="mode-btn-pyqa" onclick="setMode('pyqa')">
-                <span class="mode-icon">💬</span> Python Q&amp;A
-            </button>
-            <button type="button" class="mode-btn" id="mode-btn-review" onclick="setMode('review')">
-                <span class="mode-icon">🔍</span> Code Review
-            </button>
-        </div>
-    </div>
+.message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
 
-    <div id="user-info">
-        <div id="conn-status" class="conn-status" aria-live="polite">
-            <span class="status-dot"></span>
-            <span id="status-text">Connecting...</span>
-        </div>
-        <span id="welcome-text"></span>
-    </div>
-</header>
+.message.assistant {
+    align-self: flex-start;
+}
 
-<div class="chat-layout">
+/* Avatar */
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
 
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <button class="btn btn--primary btn--block btn--sm" onclick="newChat()">+ New Chat</button>
-        </div>
-        <div class="sidebar-list" id="session-list">
-            <div class="sidebar-empty">No past sessions</div>
-        </div>
-    </div>
+    align-self: flex-end; /* FIX alignment */
+    margin-top: 0;
+}
 
-    <!-- Main Chat -->
-    <div id="chat-main">
+.message.user .avatar {
+    background: var(--primary);
+    color: #fff;
+}
 
-        <!-- Mode Banner -->
-        <div id="mode-banner" class="mode-banner">
-            <span id="mode-banner-icon">💬</span>
-            <span id="mode-banner-label">Python Q&amp;A</span>
-            <span id="mode-banner-desc" class="mode-banner-desc">— Ask any Python question</span>
-        </div>
+.message.assistant .avatar {
+    background: var(--avatar-ai);
+    color: #444;
+}
 
-        <!-- Messages -->
-        <div id="messages">
+/* REMOVE wrapper spacing effect */
+.bubble-wrapper {
+    display: contents;
+}
 
-            <!-- Assistant Message -->
-            <div class="message assistant">
-                <div class="avatar">PyAI</div>
+/* Bubble */
+.bubble {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    line-height: 1.45; /* tighter text */
+    width: fit-content;
+    max-width: 680px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    display: inline-block;
+}
 
-                <div class="bubble">
-                    Hello! I'm PyAssist. Switch between 
-                    <strong>Python Q&amp;A</strong> for language questions and 
-                    <strong>Code Review</strong> to get feedback on your code.
+/* Bubble colors */
+.message.user .bubble {
+    background: var(--primary);
+    color: #fff;
+    border-radius: var(--radius) 2px var(--radius) var(--radius);
+}
 
-                    <span class="msg-time">now</span>
-                    <button class="copy-btn">Copy</button>
-                </div>
-            </div>
+.message.assistant .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px var(--radius) var(--radius) var(--radius);
+}
 
-        </div>
+/* Footer INLINE (no vertical space) */
+.msg-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+}
 
-        <!-- Input Area -->
-        <div class="input-area">
-            <div id="attachments-area" class="attachments-area"></div>
+/* User footer alignment */
+.message.user .msg-footer {
+    justify-content: flex-end;
+}
 
-            <div class="input-row">
-                <textarea
-                    id="chat-input"
-                    class="input"
-                    placeholder="Ask a Python question..."
-                    rows="1"
-                    onkeydown="handleKeyPress(event)"
-                    oninput="autoResizeTextarea(this)"
-                ></textarea>
+/* Timestamp */
+.msg-time {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.7;
+    white-space: nowrap;
+}
 
-                <div class="input-actions">
-                    <label class="attach-btn" title="Attach a file" aria-label="Attach file">
-                        📎
-                        <input type="file" id="file-input" multiple accept=".py,.txt,.js,.ts,.json,.md,.html,.css" style="display:none">
-                    </label>
+/* Duration badge */
+.msg-duration {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.15);
+    border-radius: var(--radius-pill);
+    padding: 1px 7px;
+}
 
-                    <button id="send-btn" class="btn btn--primary" onclick="sendMessage()">Send</button>
-                </div>
-            </div>
-        </div>
+/* Copy button */
+.copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 11px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.4;
+}
 
-    </div>
-</div>
+.copy-btn:hover {
+    background: var(--hover);
+    color: var(--text);
+}
 
-<script src="/static/js/all.js"></script>
-</body>
-</html>
+/* User bubble copy styling */
+.message.user .copy-btn {
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+}
+
+.message.user .copy-btn:hover {
+    background: var(--hover);
+    color: var(--text);
+}
