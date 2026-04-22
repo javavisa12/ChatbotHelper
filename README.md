@@ -1,199 +1,108 @@
-/* ============================================================
-   PyAssist — style.css (UPDATED - FIXED MESSAGE SPACING)
-   ============================================================ */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyAssist - Python Assistant</title>
+    <link rel="stylesheet" href="/static/css/all.css">
+</head>
+<body>
 
-/* ── Design tokens ────────────────────────────────────────── */
-:root {
-    --primary: #f30e19;
-    --primary-dark: #e92929;
-    --primary-light: #e8effe;
+<header>
+    <div class="brand">
+        <button id="toggle-sidebar" type="button" onclick="toggleSidebar()" title="Toggle chat history" aria-label="Toggle chat history">&#9776;</button>
+        <a class="back-link">PyAssist</a>
+    </div>
 
-    --surface: #ffffff;
-    --bg: #f7f8fa;
-    --hover: #f0f2f5;
-    --border: #e2e5ea;
+    <div class="header-center">
+        <div class="mode-toggle" role="group" aria-label="Assistant mode">
+            <button type="button" class="mode-btn active" id="mode-btn-pyqa" onclick="setMode('pyqa')">
+                <span class="mode-icon">💬</span> Python Q&amp;A
+            </button>
+            <button type="button" class="mode-btn" id="mode-btn-review" onclick="setMode('review')">
+                <span class="mode-icon">🔍</span> Code Review
+            </button>
+        </div>
+    </div>
 
-    --text: #1a1f2e;
-    --text-muted: #6b7280;
+    <div id="user-info">
+        <div id="conn-status" class="conn-status" aria-live="polite">
+            <span class="status-dot"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+        <span id="welcome-text"></span>
+    </div>
+</header>
 
-    --avatar-ai: #e8effe;
+<div class="chat-layout">
 
-    --shadow-sm: 0 1px 4px rgba(0,0,0,.08);
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <button class="btn btn--primary btn--block btn--sm" onclick="newChat()">+ New Chat</button>
+        </div>
+        <div class="sidebar-list" id="session-list">
+            <div class="sidebar-empty">No past sessions</div>
+        </div>
+    </div>
 
-    --radius: 10px;
-    --radius-sm: 6px;
-    --radius-pill: 999px;
+    <!-- Main Chat -->
+    <div id="chat-main">
 
-    --fs-base: 14px;
-}
+        <!-- Mode Banner -->
+        <div id="mode-banner" class="mode-banner">
+            <span id="mode-banner-icon">💬</span>
+            <span id="mode-banner-label">Python Q&amp;A</span>
+            <span id="mode-banner-desc" class="mode-banner-desc">— Ask any Python question</span>
+        </div>
 
-/* ── Reset ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        <!-- Messages -->
+        <div id="messages">
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: var(--fs-base);
-    color: var(--text);
-    background: var(--bg);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+            <!-- Assistant Message -->
+            <div class="message assistant">
+                <div class="avatar">PyAI</div>
 
-/* ── Layout ─────────────────────────────────────────── */
-.chat-layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
+                <div class="bubble">
+                    Hello! I'm PyAssist. Switch between 
+                    <strong>Python Q&amp;A</strong> for language questions and 
+                    <strong>Code Review</strong> to get feedback on your code.
 
-/* ── Chat main ────────────────────────────────────────────── */
-#chat-main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+                    <span class="msg-time">now</span>
+                    <button class="copy-btn">Copy</button>
+                </div>
+            </div>
 
-/* ============================================================
-   ✅ FIXED MESSAGES SECTION
-   ============================================================ */
+        </div>
 
-#messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
+        <!-- Input Area -->
+        <div class="input-area">
+            <div id="attachments-area" class="attachments-area"></div>
 
-/* Message row */
-.message {
-    display: flex;
-    gap: 6px;
-    max-width: 820px;
-    align-items: flex-end; /* KEY FIX */
-}
+            <div class="input-row">
+                <textarea
+                    id="chat-input"
+                    class="input"
+                    placeholder="Ask a Python question..."
+                    rows="1"
+                    onkeydown="handleKeyPress(event)"
+                    oninput="autoResizeTextarea(this)"
+                ></textarea>
 
-.message.user {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-}
+                <div class="input-actions">
+                    <label class="attach-btn" title="Attach a file" aria-label="Attach file">
+                        📎
+                        <input type="file" id="file-input" multiple accept=".py,.txt,.js,.ts,.json,.md,.html,.css" style="display:none">
+                    </label>
 
-.message.assistant {
-    align-self: flex-start;
-}
+                    <button id="send-btn" class="btn btn--primary" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
 
-/* Avatar */
-.avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
+    </div>
+</div>
 
-    align-self: flex-end; /* FIX */
-}
-
-.message.user .avatar {
-    background: var(--primary);
-    color: #fff;
-}
-
-.message.assistant .avatar {
-    background: var(--avatar-ai);
-    color: #444;
-}
-
-/* REMOVE vertical spacing issue */
-.bubble-wrapper {
-    display: contents;
-}
-
-/* Bubble */
-.bubble {
-    padding: 10px 14px;
-    border-radius: var(--radius);
-    font-size: 14px;
-    line-height: 1.45;
-    max-width: 680px;
-    white-space: pre-wrap;
-    word-break: break-word;
-    display: inline-block;
-}
-
-.message.user .bubble {
-    background: var(--primary);
-    color: #fff;
-    border-radius: var(--radius) 2px var(--radius) var(--radius);
-}
-
-.message.assistant .bubble {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 2px var(--radius) var(--radius) var(--radius);
-}
-
-/* INLINE footer (no extra height) */
-.msg-footer {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: 8px;
-}
-
-.message.user .msg-footer {
-    justify-content: flex-end;
-}
-
-/* Timestamp */
-.msg-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.7;
-}
-
-/* Copy button */
-.copy-btn {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    font-size: 11px;
-    padding: 2px 8px;
-    cursor: pointer;
-}
-
-.copy-btn:hover {
-    background: var(--hover);
-    color: var(--text);
-}
-
-/* ── Input area ───────────────────────────────────────────── */
-.input-area {
-    padding: 12px 20px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-}
-
-.input-row {
-    display: flex;
-    gap: 10px;
-}
-
-#chat-input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-}
-
-/* ── Scrollbar ───────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+<script src="/static/js/all.js"></script>
+</body>
+</html>
