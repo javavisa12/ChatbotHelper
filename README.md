@@ -1,17 +1,150 @@
-Traceback (most recent call last):
-  File "/pythonITD/PythonAssistance/test_model_server.py", line 20, in <module>
-    llm = Llama(
-          ^^^^^^
-  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/llama_cpp/llama.py", line 374, in __init__
-    internals.LlamaModel(
-  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/llama_cpp/_internals.py", line 58, in __init__
-    raise ValueError(f"Failed to load model from file: {path_model}")
-ValueError: Failed to load model from file: app/models/starcoder2-15b-Q8_0.gguf
-Exception ignored in: <function LlamaModel.__del__ at 0x7f089e38b6a0>
-Traceback (most recent call last):
-  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/llama_cpp/_internals.py", line 86, in __del__
-    self.close()
-  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/llama_cpp/_internals.py", line 78, in close
-    if self.sampler is not None:
-       ^^^^^^^^^^^^
-AttributeError: 'LlamaModel' object has no attribute 'sampler'
+"""
+test_model_server.py
+--------------------
+Standalone Flask test server for StarCoder2-15B (llama.cpp)
+Runs on port 8001 — completely separate from your chatbot on port 8000.
+
+Usage:
+    python test_model_server.py
+"""
+
+from flask import Flask, request, jsonify
+from llama_cpp import Llama
+import time
+import os
+
+# ── Load Model ────────────────────────────────────────────────────────────────
+# Absolute path — works no matter which directory you run this script from
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "app", "models", "starcoder2-15b-Q8_0.gguf")
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(
+        f"\n❌ Model not found at: {MODEL_PATH}"
+        f"\n   Make sure 'app/models/starcoder2-15b-Q8_0.gguf' is in the same folder as this script."
+        f"\n   Or edit MODEL_PATH in this file to the full absolute path of your .gguf file."
+    )
+
+print(f"\n🔧 Loading model: {MODEL_PATH} ...")
+
+llm = Llama(
+    model_path=MODEL_PATH,
+    n_ctx=4096,
+    n_gpu_layers=-1,   # -1 = use GPU if available, 0 = CPU only
+    verbose=False,
+)
+
+print("✅ Model loaded!\n")
+
+# ── Flask App ─────────────────────────────────────────────────────────────────
+app = Flask(__name__)
+
+# Default generation settings
+TEMPERATURE = 0.2
+MAX_TOKENS  = 1000
+
+
+@app.route("/", methods=["GET"])
+def root():
+    return jsonify({
+        "status": "running",
+        "model": MODEL_PATH,
+        "port": 8001,
+        "note": "Test server — your chatbot on port 8000 is untouched."
+    })
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    """
+    Body (JSON):
+        prompt       : str   — required
+        temperature  : float — optional (default 0.2)
+        max_tokens   : int   — optional (default 1000)
+        stop         : list  — optional stop sequences
+    """
+    data = request.get_json()
+
+    if not data or not data.get("prompt", "").strip():
+        return jsonify({"error": "prompt is required"}), 400
+
+    prompt      = data["prompt"]
+    temperature = data.get("temperature", TEMPERATURE)
+    max_tokens  = data.get("max_tokens", MAX_TOKENS)
+    stop        = data.get("stop", [])
+
+    try:
+        start  = time.time()
+        output = llm(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stop=stop,
+            echo=False,
+        )
+        elapsed = round(time.time() - start, 3)
+
+        return jsonify({
+            "response":        output["choices"][0]["text"].strip(),
+            "tokens_used":     output["usage"]["total_tokens"],
+            "elapsed_seconds": elapsed,
+            "model":           MODEL_PATH,
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/complete", methods=["POST"])
+def complete():
+    """
+    Code completion endpoint — ideal for StarCoder2.
+    Wraps your code snippet in the StarCoder2 FIM (fill-in-middle) format.
+
+    Body (JSON):
+        prefix : str — code before the cursor
+        suffix : str — code after the cursor (optional)
+    """
+    data   = request.get_json()
+    prefix = data.get("prefix", "")
+    suffix = data.get("suffix", "")
+
+    if not prefix.strip():
+        return jsonify({"error": "prefix is required"}), 400
+
+    # StarCoder2 FIM format
+    prompt = f"<fim_prefix>{prefix}<fim_suffix>{suffix}<fim_middle>"
+
+    try:
+        start  = time.time()
+        output = llm(
+            prompt,
+            max_tokens=data.get("max_tokens", MAX_TOKENS),
+            temperature=data.get("temperature", TEMPERATURE),
+            stop=["<fim_pad>", "<|endoftext|>"],
+            echo=False,
+        )
+        elapsed = round(time.time() - start, 3)
+
+        return jsonify({
+            "completion":      output["choices"][0]["text"].strip(),
+            "tokens_used":     output["usage"]["total_tokens"],
+            "elapsed_seconds": elapsed,
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Run ───────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    print("🚀 Test server running on http://localhost:8001")
+    print("   GET  /health")
+    print("   POST /chat       — raw prompt")
+    print("   POST /complete   — StarCoder2 FIM code completion\n")
+    app.run(host="0.0.0.0", port=8001, debug=False)
