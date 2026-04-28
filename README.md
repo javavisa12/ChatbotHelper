@@ -1,34 +1,45 @@
-✅  LLM Loader is READY — http://localhost:8505
-    Health : http://localhost:8505/health
-    Infer  : POST http://localhost:8505/generate
+'''LLM chat interface that connects to the llm_loader service.'''
+import os
+import requests
+from config import MAX_TOKENS, TEMP, LLM_LOADER_URL, LLM_LOADER_SECRET, LLM_HELPER_ID
 
-    Now start your Flask app:  python app.py
+def chat(input_data) -> str:
+    # Build prompt — StarCoder2 uses plain text, not chat tokens
+    if isinstance(input_data, list):
+        formatted = ""
+        for msg in input_data:
+            role    = msg.get("role")
+            content = msg.get("content", "")
+            formatted += f"# {role}\n{content}\n"
+        formatted += "# assistant\n"
+    else:
+        formatted = f"# system\nYou are a highly skilled Python engineer.\n# user\n{input_data}\n# assistant\n"
 
-INFO:     127.0.0.1:43652 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:43666 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:64514 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:31014 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:31028 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:60952 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:60958 - "POST /health HTTP/1.1" 405 Method Not Allowed
-2026-04-28 14:26:55,448 INFO Generating — helper_id=python_assistant max_tokens=1024
-INFO:     127.0.0.1:39090 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:39102 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:26060 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:26074 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:17536 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:17544 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:64804 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:64814 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:19452 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:19454 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:32410 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:32416 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:15028 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:15038 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:18350 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:18358 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:26972 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:26976 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:65012 - "POST /health HTTP/1.1" 405 Method Not Allowed
-INFO:     127.0.0.1:65018 - "POST /health HTTP/1.1" 405 Me
+    try:
+        response = requests.get(
+            f"{LLM_LOADER_URL}/generate",        
+            headers={
+                "Content-Type": "application/json",
+                "X-Secret": LLM_LOADER_SECRET,   
+            },
+            json={
+                "prompt":      formatted,
+                "max_tokens":  MAX_TOKENS,
+                "temperature": TEMP,
+                "stop":        ["<|endoftext|>", "```\n\n"],  
+                "stream":      False,
+                "helper_id":   LLM_HELPER_ID,
+            },
+            timeout=180,
+        )
+        response.raise_for_status()
+        return response.json().get("text", "Error: empty response")
+
+    except requests.exceptions.Timeout:
+        return "Error: LLM request timed out"
+    except requests.exceptions.ConnectionError:
+        return "Error: Cannot connect to llm_loader"
+    except requests.exceptions.HTTPError as e:
+        return f"Error: llm_loader returned {e.response.status_code}"
+    except Exception as e:
+        return f"Error: {str(e)}"
