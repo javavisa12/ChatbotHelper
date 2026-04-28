@@ -11,15 +11,18 @@ def health_check() -> dict:
             f"{LLM_LOADER_URL}/health",
             headers={"X-Internal-Secret": LLM_LOADER_SECRET},
             timeout=5,
+            json={}  # optional, but safer for POST
         )
         response.raise_for_status()
         return response.json()
+
     except requests.exceptions.ConnectionError:
         return {"status": "unreachable"}
     except requests.exceptions.Timeout:
         return {"status": "timeout"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
+
 
 
 def test_inference() -> dict:
