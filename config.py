@@ -15,13 +15,13 @@ load_dotenv()
 
 # ============================================================
 
-LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://llm-loader:8501")
+LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://localhost:8505")
 LLM_LOADER_SECRET = os.getenv("LLM_LOADER_SECRET", "")
 LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python_assistant")
 
-MAX_TOKENS = 512
+MAX_TOKENS = 1024
 TEMP = 0.2
-DEFAULT_MODEL = "qwen"
+DEFAULT_MODEL = "starcoder2"
 
 # ============================================================
 
@@ -44,7 +44,7 @@ TEMP_ROOT = STORAGE_ROOT / "temp"
 FILE_AUDIT_DIR = AUDIT_ROOT / "file_operations"
 CHAT_AUDIT_DIR = AUDIT_ROOT / "chat_sessions"
 
-# 🔥 Chat file uploads (per session)
+# Chat file uploads (per session)
 
 CHAT_UPLOAD_DIR = STORAGE_ROOT / "Uploads"
 
