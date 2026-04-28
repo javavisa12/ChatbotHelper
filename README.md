@@ -1,89 +1,34 @@
-"""
-App configuration for Python Assistant.
-Includes LLM settings + storage/audit configuration.
-"""
+((PythonAssistance) ) [mia66375@svdwh008 PythonAssistance]$ python start_llm_loader.py
+[start] Loading env from: /pythonITD/PythonAssistance/.env
+[start] Model file found: wizardcoder-python-34b-v1.0.Q8_0.gguf  (863 MB)
 
-import os
-from pathlib import Path
-from dotenv import load_dotenv
+=======================================================
+  LLM Loader — llama_cpp_python + StarCoder2
+=======================================================
+  Host        : 0.0.0.0:8505
+  Model       : app/models/wizardcoder-python-34b-v1.0.Q8_0.gguf
+  Context     : 4096 tokens
+  Threads     : 8
+  GPU layers  : 0
+  Auth secret : NOT SET (open)
+=======================================================
 
-load_dotenv()
+[start] Waiting for loader to be healthy at http://localhost:8505/health ...
+INFO:     Started server process [1071016]
+INFO:     Waiting for application startup.
+2026-04-28 11:01:47,270 INFO Loading model from: app/models/wizardcoder-python-34b-v1.0.Q8_0.gguf
+ERROR:    Traceback (most recent call last):
+  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/starlette/routing.py", line 638, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/pythonITD/PythonAssistance/llm_loader/server.py", line 30, in lifespan
+    llm = Llama(
+          ^^^^^^
+  File "/pythonITD/PythonAssistance/lib64/python3.12/site-packages/llama_cpp/llama.py", line 377, in __init__
+    raise ValueError(f"Model path does not exist: {model_path}")
+ValueError: Model path does not exist: app/models/wizardcoder-python-34b-v1.0.Q8_0.gguf
 
-# ============================================================
-
-# 🔹 LLM CONFIG
-
-# ============================================================
-
-LLM_LOADER_URL = os.getenv("LLM_LOADER_URL", "http://llm-loader:8505")
-LLM_LOADER_SECRET = os.getenv("LLM_LOADER_SECRET", "")
-LLM_HELPER_ID = os.getenv("LLM_HELPER_ID", "python_assistant")
-
-MAX_TOKENS = 1025
-TEMP = 0.2
-DEFAULT_MODEL = "starcoder2"
-
-# ============================================================
-
-# 🔹 STORAGE ROOT (YOUR CUSTOM PATH)
-
-# ============================================================
-
-STORAGE_ROOT = Path("/pythonITD/askpbai/storage_volume/logs/PyAssist")
-
-# ============================================================
-
-# 🔹 DIRECTORY STRUCTURE
-
-# ============================================================
-
-AUDIT_ROOT = STORAGE_ROOT / "audit"
-UPLOAD_ROOT = STORAGE_ROOT / "uploads"
-TEMP_ROOT = STORAGE_ROOT / "temp"
-
-FILE_AUDIT_DIR = AUDIT_ROOT / "file_operations"
-CHAT_AUDIT_DIR = AUDIT_ROOT / "chat_sessions"
-
-# Chat file uploads (per session)
-
-CHAT_UPLOAD_DIR = STORAGE_ROOT / "Uploads"
-
-# ============================================================
-
-# 🔹 AUDIT SETTINGS
-
-# ============================================================
-
-FILE_AUDIT_FORMAT = os.getenv("PBAI_FILE_AUDIT_FORMAT", "day")
-
-# ============================================================
-
-# 🔹 CREATE DIRECTORIES
-
-# ============================================================
-
-def ensure_storage_dirs():
-   
- dirs = [
-  STORAGE_ROOT,
-  AUDIT_ROOT,
-  FILE_AUDIT_DIR,
-  CHAT_AUDIT_DIR,
-  CHAT_UPLOAD_DIR,
-  UPLOAD_ROOT,
-  TEMP_ROOT,
-]
-
- for d in dirs:
-    d.mkdir(parents=True, exist_ok=True)
-
-
-# ============================================================
-
-# 🔹 DEBUG
-
-# ============================================================
-
-if __name__ == "__main__":
- ensure_storage_dirs()
-print("✅ Storage initialized at:", STORAGE_ROOT)
+ERROR:    Application startup failed. Exiting.
