@@ -1,78 +1,51 @@
-"""LLM Loader server — llama_cpp_python backend."""
+"""Launcher for the LLM Loader service."""
+import subprocess
+import sys
 import time
-import logging
-from contextlib import asynccontextmanager
-from typing import Optional
+import urllib.request
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Header
-from pydantic import BaseModel
-from llama_cpp import Llama
+# Add llm_loader to path so model_config imports cleanly
+sys.path.insert(0, str(Path(__file__).parent / "llm_loader"))
+import model_config as cfg  # noqa: E402
 
-import model_config as cfg
+cmd = [
+    sys.executable, "-m", "uvicorn", "server:app",
+    "--host", cfg.LLM_HOST,
+    "--port", str(cfg.LLM_PORT),
+    "--workers", "1",
+]
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger("llm_loader")
+print("\n" + "=" * 50)
+print("  LLM Loader — StarCoder2")
+print("=" * 50)
+print(f"  Model  : {cfg.MODEL_PATH}")
+print(f"  Host   : {cfg.LLM_HOST}:{cfg.LLM_PORT}")
+print(f"  Ctx    : {cfg.N_CTX}  Threads: {cfg.N_THREADS}")
+print("=" * 50 + "\n")
 
-llm: Optional[Llama] = None
+proc = subprocess.Popen(cmd, cwd=str(Path(__file__).parent / "llm_loader"))
 
+# Wait for health
+url = f"http://localhost:{cfg.LLM_PORT}/health"
+print(f"Waiting for loader at {url} ...")
+for _ in range(60):
+    try:
+        with urllib.request.urlopen(url, timeout=3) as r:
+            if r.status == 200:
+                print(f"\n✅ LLM Loader READY — http://localhost:{cfg.LLM_PORT}")
+                print("   Now start Flask:  python app.py\n")
+                break
+    except Exception:
+        time.sleep(3)
+else:
+    print("⚠️  Loader did not start in time. Check logs above.")
+    proc.terminate()
+    sys.exit(1)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global llm
-    log.info("Loading model from: %s", cfg.MODEL_PATH)
-    t0 = time.time()
-    llm = Llama(
-        model_path=cfg.MODEL_PATH,
-        n_ctx=cfg.N_CTX,
-        n_threads=cfg.N_THREADS,
-        n_gpu_layers=cfg.N_GPU_LAYERS,
-        verbose=False,
-    )
-    log.info("Model loaded in %.1fs", time.time() - t0)
-    yield
-    del llm
-
-
-app = FastAPI(lifespan=lifespan)
-
-
-class GenerateRequest(BaseModel):
-    prompt: str
-    max_tokens: int = cfg.MAX_TOKENS
-    temperature: float = cfg.TEMPERATURE
-    stop: list[str] = ["<|endoftext|>"]
-    helper_id: str = "python_assistant"
-
-
-def _check_secret(x_secret: str = "") -> None:
-    if cfg.LLM_INTERNAL_SECRET and x_secret != cfg.LLM_INTERNAL_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-
-@app.get("/health")
-def health():
-    return {"status": "healthy", "model_loaded": llm is not None}
-
-
-@app.post("/generate")
-def generate(
-    body: GenerateRequest,
-    x_secret: str = Header(default="", alias="X-Secret"),
-):
-    _check_secret(x_secret)
-
-    if llm is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
-
-    output = llm(
-        body.prompt,
-        max_tokens=body.max_tokens,
-        temperature=body.temperature,
-        stop=body.stop,
-        echo=False,
-    )
-
-    return {
-        "text": output["choices"][0]["text"],   # ← "text" matches chat.py
-        "tokens_used": output["usage"]["total_tokens"],
-    }
+try:
+    proc.wait()
+except KeyboardInterrupt:
+    print("\nShutting down...")
+    proc.terminate()
+    proc.wait()
