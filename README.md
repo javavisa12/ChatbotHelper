@@ -1,51 +1,34 @@
-"""Launcher for the LLM Loader service."""
-import subprocess
-import sys
-import time
-import urllib.request
-from pathlib import Path
+✅  LLM Loader is READY — http://localhost:8505
+    Health : http://localhost:8505/health
+    Infer  : POST http://localhost:8505/generate
 
-# Add llm_loader to path so model_config imports cleanly
-sys.path.insert(0, str(Path(__file__).parent / "llm_loader"))
-import model_config as cfg  # noqa: E402
+    Now start your Flask app:  python app.py
 
-cmd = [
-    sys.executable, "-m", "uvicorn", "server:app",
-    "--host", cfg.LLM_HOST,
-    "--port", str(cfg.LLM_PORT),
-    "--workers", "1",
-]
-
-print("\n" + "=" * 50)
-print("  LLM Loader — StarCoder2")
-print("=" * 50)
-print(f"  Model  : {cfg.MODEL_PATH}")
-print(f"  Host   : {cfg.LLM_HOST}:{cfg.LLM_PORT}")
-print(f"  Ctx    : {cfg.N_CTX}  Threads: {cfg.N_THREADS}")
-print("=" * 50 + "\n")
-
-proc = subprocess.Popen(cmd, cwd=str(Path(__file__).parent / "llm_loader"))
-
-# Wait for health
-url = f"http://localhost:{cfg.LLM_PORT}/health"
-print(f"Waiting for loader at {url} ...")
-for _ in range(60):
-    try:
-        with urllib.request.urlopen(url, timeout=3) as r:
-            if r.status == 200:
-                print(f"\n✅ LLM Loader READY — http://localhost:{cfg.LLM_PORT}")
-                print("   Now start Flask:  python app.py\n")
-                break
-    except Exception:
-        time.sleep(3)
-else:
-    print("⚠️  Loader did not start in time. Check logs above.")
-    proc.terminate()
-    sys.exit(1)
-
-try:
-    proc.wait()
-except KeyboardInterrupt:
-    print("\nShutting down...")
-    proc.terminate()
-    proc.wait()
+INFO:     127.0.0.1:43652 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:43666 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:64514 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:31014 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:31028 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:60952 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:60958 - "POST /health HTTP/1.1" 405 Method Not Allowed
+2026-04-28 14:26:55,448 INFO Generating — helper_id=python_assistant max_tokens=1024
+INFO:     127.0.0.1:39090 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:39102 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:26060 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:26074 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:17536 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:17544 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:64804 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:64814 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:19452 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:19454 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:32410 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:32416 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:15028 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:15038 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:18350 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:18358 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:26972 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:26976 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:65012 - "POST /health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:65018 - "POST /health HTTP/1.1" 405 Me
