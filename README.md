@@ -1,19 +1,78 @@
-"""Model configuration for llama_cpp_python backend."""
-import os
-from pathlib import Path
-from dotenv import load_dotenv
+"""LLM Loader server — llama_cpp_python backend."""
+import time
+import logging
+from contextlib import asynccontextmanager
+from typing import Optional
 
-load_dotenv()
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel
+from llama_cpp import Llama
 
-MODEL_PATH   = os.getenv(
-    "MODEL_PATH",
-    str(Path(__file__).parent.parent / "app" / "models" / "starcoder2-15b-Q4_K_M.gguf")
-)
-LLM_HOST     = os.getenv("LLM_HOST",           "0.0.0.0")
-LLM_PORT     = int(os.getenv("LLM_PORT",       8505))
-N_CTX        = int(os.getenv("N_CTX",          2048))
-N_THREADS    = int(os.getenv("N_THREADS",      8))
-N_GPU_LAYERS = int(os.getenv("N_GPU_LAYERS",   0))
-MAX_TOKENS   = int(os.getenv("MAX_TOKENS",     512))
-TEMPERATURE  = float(os.getenv("TEMPERATURE", 0.1))
-LLM_INTERNAL_SECRET = os.getenv("LLM_INTERNAL_SECRET", "")
+import model_config as cfg
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("llm_loader")
+
+llm: Optional[Llama] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global llm
+    log.info("Loading model from: %s", cfg.MODEL_PATH)
+    t0 = time.time()
+    llm = Llama(
+        model_path=cfg.MODEL_PATH,
+        n_ctx=cfg.N_CTX,
+        n_threads=cfg.N_THREADS,
+        n_gpu_layers=cfg.N_GPU_LAYERS,
+        verbose=False,
+    )
+    log.info("Model loaded in %.1fs", time.time() - t0)
+    yield
+    del llm
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+class GenerateRequest(BaseModel):
+    prompt: str
+    max_tokens: int = cfg.MAX_TOKENS
+    temperature: float = cfg.TEMPERATURE
+    stop: list[str] = ["<|endoftext|>"]
+    helper_id: str = "python_assistant"
+
+
+def _check_secret(x_secret: str = "") -> None:
+    if cfg.LLM_INTERNAL_SECRET and x_secret != cfg.LLM_INTERNAL_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "model_loaded": llm is not None}
+
+
+@app.post("/generate")
+def generate(
+    body: GenerateRequest,
+    x_secret: str = Header(default="", alias="X-Secret"),
+):
+    _check_secret(x_secret)
+
+    if llm is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    output = llm(
+        body.prompt,
+        max_tokens=body.max_tokens,
+        temperature=body.temperature,
+        stop=body.stop,
+        echo=False,
+    )
+
+    return {
+        "text": output["choices"][0]["text"],   # ← "text" matches chat.py
+        "tokens_used": output["usage"]["total_tokens"],
+    }
