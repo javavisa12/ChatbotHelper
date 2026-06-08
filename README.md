@@ -1,12 +1,2 @@
-@echo off
+<img width="862" height="461" alt="image" src="https://github.com/user-attachments/assets/23eaa4cf-428c-43f3-90ed-d1085fee6060" />
 
-python -m llama_cpp.server ^
-  --model Ai-Agent\models\Phi-3-mini-4k-instruct-q4.gguf ^
-  --host 0.0.0.0 ^
-  --port 8080 ^
-  --n_ctx 4096 ^
-  --n_threads 8 ^
-  --n_batch 256 ^
-  --chat_format chatml
-
-pause
